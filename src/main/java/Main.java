@@ -17,6 +17,11 @@ public class Main {
     }
 
     public static void eval(String inputString) {
+        String trimmed = inputString.trim();
+        if (trimmed.equals("exit")) {
+            System.exit(0);
+        }
+
         System.out.println(inputString + ": command not found");
     }
 }
