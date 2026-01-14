@@ -18,8 +18,21 @@ public class Main {
 
     public static void eval(String inputString) {
         String trimmed = inputString.trim();
+
+        // Implement exit
         if (trimmed.equals("exit")) {
             System.exit(0);
+        }
+
+        // Implement echo
+        if (trimmed.equals("echo")) {
+            System.out.println();
+            return;
+        }
+        if (trimmed.startsWith("echo ")) {
+            String echoArgs = trimmed.substring(5);
+            System.out.println(echoArgs);
+            return;
         }
 
         System.out.println(inputString + ": command not found");
