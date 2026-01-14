@@ -79,7 +79,7 @@ public class Main {
                     String execPath = findExecutable(arg);
                     if (execPath != null) {
                         System.out.println(arg + " is " + execPath);
-                    } else {p
+                    } else {
                         System.out.println(arg + ": not found");
                     }
                 }
