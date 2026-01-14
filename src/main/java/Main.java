@@ -1,6 +1,8 @@
 import java.util.Scanner;
 
 public class Main {
+    private static final String[] BUILTINS = {"exit", "echo", "type"};
+
     public static void main(String[] args) throws Exception {
 
         while (true) {
@@ -16,6 +18,15 @@ public class Main {
         return scanner.nextLine();
     }
 
+    private static boolean isBuiltin(String name) {
+        for (String builtin : BUILTINS) {
+            if (builtin.equals(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static void eval(String inputString) {
         String trimmed = inputString.trim();
 
@@ -25,13 +36,29 @@ public class Main {
         }
 
         // Implement echo
-        if (trimmed.equals("echo")) {
-            System.out.println();
-            return;
-        }
         if (trimmed.startsWith("echo ")) {
             String echoArgs = trimmed.substring(5);
             System.out.println(echoArgs);
+            return;
+        }
+
+        // Implement type
+        if (trimmed.equals("type")) {
+            return;
+        }
+
+        if (trimmed.startsWith("type ") {
+            String typeArgs = trimmed.substring(5).trim();
+            if (!typeArgs.isBlank()) {
+                String[] args = typeArgs.split("\\s+");
+                for (String arg : args) {
+                    if (isBuiltin(arg)) {
+                        System.out.println(arg + " is a shell builtin");
+                    } else {
+                        System.out.println(arg + ": not found");
+                    }
+                }
+            }
             return;
         }
 
