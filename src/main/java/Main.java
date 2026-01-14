@@ -47,7 +47,7 @@ public class Main {
             return;
         }
 
-        if (trimmed.startsWith("type ") {
+        if (trimmed.startsWith("type ")) {
             String typeArgs = trimmed.substring(5).trim();
             if (!typeArgs.isBlank()) {
                 String[] args = typeArgs.split("\\s+");
