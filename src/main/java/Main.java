@@ -1,3 +1,4 @@
+import java.io.File;
 import java.util.Scanner;
 
 public class Main {
@@ -27,6 +28,24 @@ public class Main {
         return false;
     }
 
+    private static String findExecutable(String name) {
+        String pathEnv = System.getenv("PATH");
+        if (pathEnv == null || pathEnv.isBlank()) {
+            return null;
+        }
+
+        String[] dirs = pathEnv.split(":");
+        for (String dir : dirs) {
+            String dirPath = dir.isEmpty() ? "." : dir;
+            File candidate = new File(dirPath, name);
+            if (candidate.isFile() && candidate.canExecute()) {
+                return candidate.getAbsolutePath();
+            }
+        }
+
+        return null;
+    }
+
     public static void eval(String inputString) {
         String trimmed = inputString.trim();
 
@@ -50,18 +69,23 @@ public class Main {
         if (trimmed.startsWith("type ")) {
             String typeArgs = trimmed.substring(5).trim();
             if (!typeArgs.isBlank()) {
-                String[] args = typeArgs.split("\\s+");
+                String[] args = typeArgs.split("\s+");
                 for (String arg : args) {
                     if (isBuiltin(arg)) {
                         System.out.println(arg + " is a shell builtin");
-                    } else {
+                        continue;
+                    }
+
+                    String execPath = findExecutable(arg);
+                    if (execPath != null) {
+                        System.out.println(arg + " is " + execPath);
+                    } else {p
                         System.out.println(arg + ": not found");
                     }
                 }
             }
             return;
         }
-
         System.out.println(inputString + ": command not found");
     }
 }
