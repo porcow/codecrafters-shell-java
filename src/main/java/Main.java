@@ -2,11 +2,21 @@ import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) throws Exception {
-        // TODO: Uncomment the code below to pass the first stage
-        System.out.print("$ ");
 
+        while (true) {
+            // TODO: Uncomment the code below to pass the first stage
+            System.out.print("$ ");
+            String input = read();
+            eval(input);
+        }
+    }
+
+    public static String read() {
         Scanner scanner = new Scanner(System.in);
-        String input = scanner.nextLine();
-        System.out.println(input + ": command not found");
+        return scanner.nextLine();
+    }
+
+    public static void eval(String inputString) {
+        System.out.println(inputString + ": command not found");
     }
 }
