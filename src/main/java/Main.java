@@ -1,16 +1,28 @@
-import java.io.File;
 import java.util.Scanner;
+import java.io.IOException;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.util.Map;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 
 public class Main {
-    private static final String[] BUILTINS = {"exit", "echo", "type"};
+
+    final static Map<String, Runnable> builtinMap = new HashMap<String, Runnable>() {{
+            put("echo", EchoCommand.getInstance());
+            put("exit", ExitCommand.getInstance());
+            put("type", TypeCommand.getInstance());
+        }};
 
     public static void main(String[] args) throws Exception {
 
         while (true) {
-            // TODO: Uncomment the code below to pass the first stage
             System.out.print("$ ");
             String input = read();
-            eval(input);
+            Command cmd = parse(input);
+            eval(cmd);
         }
     }
 
@@ -19,73 +31,51 @@ public class Main {
         return scanner.nextLine();
     }
 
-    private static boolean isBuiltin(String name) {
-        for (String builtin : BUILTINS) {
-            if (builtin.equals(name)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static String findExecutable(String name) {
-        String pathEnv = System.getenv("PATH");
-        if (pathEnv == null || pathEnv.isBlank()) {
-            return null;
-        }
-
-        String[] dirs = pathEnv.split(":");
-        for (String dir : dirs) {
-            String dirPath = dir.isEmpty() ? "." : dir;
-            File candidate = new File(dirPath, name);
-            if (candidate.isFile() && candidate.canExecute()) {
-                return candidate.getAbsolutePath();
-            }
-        }
-
-        return null;
-    }
-
-    public static void eval(String inputString) {
+    public static Command parse(String inputString) {
         String trimmed = inputString.trim();
+        int spaceIndex = trimmed.indexOf(' ');
+        String commandName = spaceIndex == -1 ? trimmed : trimmed.substring(0, spaceIndex);
+        String commandArgs = spaceIndex == -1 ? "" : trimmed.substring(spaceIndex + 1);
 
-        // Implement exit
-        if (trimmed.equals("exit")) {
-            System.exit(0);
-        }
+        Command command = Command.build(commandName, commandArgs);
+        return command;
+    }
 
-        // Implement echo
-        if (trimmed.startsWith("echo ")) {
-            String echoArgs = trimmed.substring(5);
-            System.out.println(echoArgs);
-            return;
-        }
+    public static void eval(Command command) {
+        if (command.isBuiltin()) {
+            Runnable builtin = builtinMap.get(command.getName());
+            if (builtin != null) {
+                builtin.run(command);
+                return;
+            }
+        } else if (command.isRunable()) {
+            List<String> cmd = new ArrayList<>();
+            cmd.add(command.getPath());
 
-        // Implement type
-        if (trimmed.equals("type")) {
-            return;
-        }
+            if (!command.getArgString().isBlank()) {
+                String[] args = command.getArgString().split("\\s+");
+                cmd.addAll(Arrays.asList(args));
+            }
 
-        if (trimmed.startsWith("type ")) {
-            String typeArgs = trimmed.substring(5).trim();
-            if (!typeArgs.isBlank()) {
-                String[] args = typeArgs.split("\s+");
-                for (String arg : args) {
-                    if (isBuiltin(arg)) {
-                        System.out.println(arg + " is a shell builtin");
-                        continue;
-                    }
-
-                    String execPath = findExecutable(arg);
-                    if (execPath != null) {
-                        System.out.println(arg + " is " + execPath);
-                    } else {
-                        System.out.println(arg + ": not found");
+            try {
+                Process process = new ProcessBuilder(cmd)
+                        .redirectErrorStream(true)
+                        .start();
+                try (BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(process.getInputStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        System.out.println(line);
                     }
                 }
+                process.waitFor();
+            } catch (IOException e) {
+                System.out.println(command.getName() + ": " + e.getMessage());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             }
-            return;
+        } else {
+            System.out.println(command.getName() + ": command not found");
         }
-        System.out.println(inputString + ": command not found");
     }
 }
