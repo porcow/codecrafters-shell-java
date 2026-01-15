@@ -14,6 +14,7 @@ public class Main {
             put("echo", EchoCommand.getInstance());
             put("exit", ExitCommand.getInstance());
             put("type", TypeCommand.getInstance());
+            put("pwd", PwdCommand.getInstance());
         }};
 
     public static void main(String[] args) throws Exception {

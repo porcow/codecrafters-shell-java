@@ -1,29 +1,37 @@
 import java.io.File;
 
 public class Command {
-    final static String[] BUILTINS = {"exit", "echo", "type"};
+    final static String[] BUILTINS = {"exit", "echo", "type", "pwd"};
 
     private boolean runable;
     private String name;
     private boolean builtin;
     private String path;
     private String argString;
+    private String workspace;
 
     public Command() {
     }
 
-    public Command(boolean runable, String name, boolean builtin, String path, String argString) {
+    public Command(boolean runable,
+                   String name,
+                   boolean builtin,
+                   String path,
+                   String argString,
+                   String workspace) {
         this.runable = runable;
         this.name = name;
         this.builtin = builtin;
         this.path = path;
         this.argString = argString;
+        this.workspace = workspace;
     }
 
     public static Command build(String name, String argString) {
         Command command = new Command();
         command.name = name;
         command.argString = argString;
+        command.workspace = System.getProperty("user.dir");
 
         if (name == null) {
             return command;
@@ -111,6 +119,14 @@ public class Command {
 
     public void setArgString(String argString) {
         this.argString = argString;
+    }
+
+    public String getWorkspace() {
+        return workspace;
+    }
+
+    public void setWorkspace(String workspace) {
+        this.workspace = workspace;
     }
 
     @Override
