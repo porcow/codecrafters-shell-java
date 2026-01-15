@@ -50,7 +50,7 @@ public class Main {
             }
         } else if (command.isRunable()) {
             List<String> cmd = new ArrayList<>();
-            cmd.add(command.getPath());
+            cmd.add(command.getName());
 
             if (!command.getArgString().isBlank()) {
                 String[] args = command.getArgString().split("\\s+");
