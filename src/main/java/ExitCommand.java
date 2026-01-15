@@ -1,4 +1,4 @@
-public class ExitCommand implements Runnable {
+public class ExitCommand implements CCRunnable {
     private static ExitCommand instance;
 
     private ExitCommand() {

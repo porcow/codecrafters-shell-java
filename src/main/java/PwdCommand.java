@@ -1,4 +1,4 @@
-public class PwdCommand implements Runnable {
+public class PwdCommand implements CCRunnable {
     private static PwdCommand instance;
 
     private PwdCommand() {

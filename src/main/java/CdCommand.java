@@ -1,7 +1,8 @@
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
-public class CdCommand implements Runnable {
+public class CdCommand implements CCRunnable {
     private static CdCommand instance;
 
     private CdCommand() {
@@ -16,14 +17,13 @@ public class CdCommand implements Runnable {
 
     @Override
     public void run(Command cmd) {
-        String rawArgs = cmd.getArgString().trim();
-        String target = rawArgs;
+        List<String> args = cmd.getArgList();
+        String target = "";
         String home = System.getenv("HOME");
-        if (rawArgs.isBlank()) {
+        if (args == null || args.isEmpty()) {
             target = home != null ? home : "";
         } else {
-            String[] parts = rawArgs.split("\\s+");
-            target = parts[0];
+            target = args.get(0);
         }
 
         if (target.startsWith("~")) {

@@ -1,4 +1,4 @@
-public class EchoCommand implements Runnable {
+public class EchoCommand implements CCRunnable {
     private static EchoCommand instance;
 
     private EchoCommand() {
@@ -13,6 +13,11 @@ public class EchoCommand implements Runnable {
 
     @Override
     public void run(Command cmd) {
-        System.out.println(cmd.getArgString());
+        if (cmd.getArgList() == null) {
+            System.out.println();
+            return;
+        }
+
+        System.out.println(String.join(" ", cmd.getArgList()));
     }
 }

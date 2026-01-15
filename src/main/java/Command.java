@@ -1,4 +1,6 @@
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Command {
     final static String[] BUILTINS = {"exit", "echo", "type", "pwd", "cd"};
@@ -8,10 +10,12 @@ public class Command {
     private boolean builtin;
     private String path;
     private String argString;
+    private List<String> argList;
     private String workspace;
     static String currentWorkspace = System.getProperty("user.dir");
 
     public Command() {
+        this.argList = new ArrayList<>();
     }
 
     public Command(boolean runable,
@@ -26,6 +30,7 @@ public class Command {
         this.path = path;
         this.argString = argString;
         this.workspace = workspace;
+        this.argList = new ArrayList<>();
     }
 
     public static Command build(String name, String argString) {
@@ -120,6 +125,14 @@ public class Command {
 
     public void setArgString(String argString) {
         this.argString = argString;
+    }
+
+    public List<String> getArgList() {
+        return argList;
+    }
+
+    public void setArgList(List<String> argList) {
+        this.argList = argList;
     }
 
     public String getWorkspace() {

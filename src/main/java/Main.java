@@ -5,13 +5,12 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.Map;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
 public class Main {
 
-    final static Map<String, Runnable> builtinMap = new HashMap<String, Runnable>() {{
+    final static Map<String, CCRunnable> builtinMap = new HashMap<String, CCRunnable>() {{
             put("echo", EchoCommand.getInstance());
             put("exit", ExitCommand.getInstance());
             put("type", TypeCommand.getInstance());
@@ -35,18 +34,51 @@ public class Main {
     }
 
     public static Command parse(String inputString) {
-        String trimmed = inputString.trim();
-        int spaceIndex = trimmed.indexOf(' ');
-        String commandName = spaceIndex == -1 ? trimmed : trimmed.substring(0, spaceIndex);
-        String commandArgs = spaceIndex == -1 ? "" : trimmed.substring(spaceIndex + 1);
+        List<String> tokens = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inSingleQuotes = false;
+        boolean tokenStarted = false;
+
+        for (int i = 0; i < inputString.length(); i++) {
+            char ch = inputString.charAt(i);
+
+            if (ch == '\'') {
+                inSingleQuotes = !inSingleQuotes;
+                tokenStarted = true;
+                continue;
+            }
+
+            if (!inSingleQuotes && Character.isWhitespace(ch)) {
+                if (tokenStarted) {
+                    tokens.add(current.toString());
+                    current.setLength(0);
+                    tokenStarted = false;
+                }
+                continue;
+            }
+
+            current.append(ch);
+            tokenStarted = true;
+        }
+
+        if (tokenStarted) {
+            tokens.add(current.toString());
+        }
+
+        String commandName = tokens.isEmpty() ? null : tokens.get(0);
+        List<String> argList = tokens.size() > 1
+                ? new ArrayList<>(tokens.subList(1, tokens.size()))
+                : new ArrayList<>();
+        String commandArgs = String.join(" ", argList);
 
         Command command = Command.build(commandName, commandArgs);
+        command.setArgList(argList);
         return command;
     }
 
     public static void eval(Command command) {
         if (command.isBuiltin()) {
-            Runnable builtin = builtinMap.get(command.getName());
+            CCRunnable builtin = builtinMap.get(command.getName());
             if (builtin != null) {
                 builtin.run(command);
                 return;
@@ -55,9 +87,9 @@ public class Main {
             List<String> cmd = new ArrayList<>();
             cmd.add(command.getName());
 
-            if (!command.getArgString().isBlank()) {
-                String[] args = command.getArgString().split("\\s+");
-                cmd.addAll(Arrays.asList(args));
+            List<String> args = command.getArgList();
+            if (args != null && !args.isEmpty()) {
+                cmd.addAll(args);
             }
 
             try {
