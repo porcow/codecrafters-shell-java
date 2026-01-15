@@ -18,15 +18,15 @@ public class CdCommand implements Runnable {
     public void run(Command cmd) {
         String rawArgs = cmd.getArgString().trim();
         String target = rawArgs;
+        String home = System.getenv("HOME");
         if (rawArgs.isBlank()) {
-            target = System.getProperty("user.home");
+            target = home != null ? home : "";
         } else {
             String[] parts = rawArgs.split("\\s+");
             target = parts[0];
         }
 
         if (target.startsWith("~")) {
-            String home = System.getProperty("user.home");
             if (home != null && !home.isBlank()) {
                 target = home + target.substring(1);
             }
