@@ -1,5 +1,6 @@
 import java.util.Scanner;
 import java.io.IOException;
+import java.io.File;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.Map;
@@ -15,6 +16,7 @@ public class Main {
             put("exit", ExitCommand.getInstance());
             put("type", TypeCommand.getInstance());
             put("pwd", PwdCommand.getInstance());
+            put("cd", CdCommand.getInstance());
         }};
 
     public static void main(String[] args) throws Exception {
@@ -60,6 +62,7 @@ public class Main {
 
             try {
                 Process process = new ProcessBuilder(cmd)
+                        .directory(new File(command.getWorkspace()))
                         .redirectErrorStream(true)
                         .start();
                 try (BufferedReader reader = new BufferedReader(

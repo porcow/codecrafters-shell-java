@@ -1,7 +1,7 @@
 import java.io.File;
 
 public class Command {
-    final static String[] BUILTINS = {"exit", "echo", "type", "pwd"};
+    final static String[] BUILTINS = {"exit", "echo", "type", "pwd", "cd"};
 
     private boolean runable;
     private String name;
@@ -9,6 +9,7 @@ public class Command {
     private String path;
     private String argString;
     private String workspace;
+    static String currentWorkspace = System.getProperty("user.dir");
 
     public Command() {
     }
@@ -31,7 +32,7 @@ public class Command {
         Command command = new Command();
         command.name = name;
         command.argString = argString;
-        command.workspace = System.getProperty("user.dir");
+        command.workspace = currentWorkspace;
 
         if (name == null) {
             return command;
@@ -127,6 +128,16 @@ public class Command {
 
     public void setWorkspace(String workspace) {
         this.workspace = workspace;
+    }
+
+    public static String getCurrentWorkspace() {
+        return currentWorkspace;
+    }
+
+    public static void setCurrentWorkspace(String workspace) {
+        if (workspace != null && !workspace.isBlank()) {
+            currentWorkspace = workspace;
+        }
     }
 
     @Override

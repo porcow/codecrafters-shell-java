@@ -13,10 +13,6 @@ public class PwdCommand implements Runnable {
 
     @Override
     public void run(Command cmd) {
-        String workspace = cmd.getWorkspace();
-        if (workspace == null || workspace.isBlank()) {
-            workspace = System.getProperty("user.dir");
-        }
-        System.out.println(workspace);
+        System.out.println(Command.currentWorkspace);
     }
 }
