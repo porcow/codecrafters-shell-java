@@ -119,4 +119,19 @@ public class PipelineTest {
         assertTrue(output.contains("cat:"));
         assertTrue(output.contains("No such file or directory"));
     }
+
+    @Test
+    void eval_appendsStderrWithTwoGreaterThan() throws Exception {
+        Command.setCurrentWorkspace(tempDir.toAbsolutePath().toString());
+        Path errors = tempDir.resolve("errors.txt");
+
+        Main.eval(Main.parseLine("cat missing1.txt 2>> errors.txt"));
+        Main.eval(Main.parseLine("cat missing2.txt 2>> errors.txt"));
+
+        String content = Files.readString(errors);
+        int first = content.indexOf("missing1.txt");
+        int second = content.indexOf("missing2.txt");
+        assertTrue(first >= 0);
+        assertTrue(second > first);
+    }
 }

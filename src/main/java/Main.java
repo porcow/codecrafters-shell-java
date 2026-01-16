@@ -64,7 +64,7 @@ public class Main {
         for (int i = 0; i < inputString.length(); i++) {
             char ch = inputString.charAt(i);
 
-            // Only split on >, 1>, 2>, >>, or 1>> when we're not inside quotes or escapes.
+            // Only split on >, 1>, 2>, >>, 1>>, or 2>> when we're not inside quotes or escapes.
             if (!inSingleQuotes && !inDoubleQuotes && ch == '\\') {
                 if (i + 1 < inputString.length()) {
                     i++;
@@ -94,6 +94,11 @@ public class Main {
 
             if (!inSingleQuotes && !inDoubleQuotes) {
                 if (ch == '2' && i + 1 < inputString.length() && inputString.charAt(i + 1) == '>') {
+                    if (i + 2 < inputString.length() && inputString.charAt(i + 2) == '>') {
+                        return new SplitResult(inputString.substring(0, i),
+                                               inputString.substring(i + 3),
+                                               RedirectType.STDERR_APPEND);
+                    }
                     return new SplitResult(inputString.substring(0, i),
                                            inputString.substring(i + 2),
                                            RedirectType.STDERR);
@@ -211,7 +216,9 @@ public class Main {
         }
 
         Command rightCommand = parse(parsed.redirectPart);
-        if (parsed.redirectType != RedirectType.STDOUT_APPEND && isRunnableCommand(rightCommand)) {
+        if ((parsed.redirectType == RedirectType.STDOUT
+                || parsed.redirectType == RedirectType.STDERR)
+                && isRunnableCommand(rightCommand)) {
             CCRunnable runner = resolveRunner(parsed.command);
             if (runner == null) {
                 System.out.println(parsed.command.getName() + ": command not found");
@@ -238,7 +245,8 @@ public class Main {
         }
         Command sink = new Command();
         try {
-            if (parsed.redirectType == RedirectType.STDERR) {
+            if (parsed.redirectType == RedirectType.STDERR
+                    || parsed.redirectType == RedirectType.STDERR_APPEND) {
                 runner.stderr(parsed.command, sink);
             } else {
                 runner.stdout(parsed.command, sink);
@@ -246,7 +254,8 @@ public class Main {
             writeRedirectOutput(parsed.command,
                     redirectTokens.get(0),
                     sink.getArgString(),
-                    parsed.redirectType == RedirectType.STDOUT_APPEND);
+                    parsed.redirectType == RedirectType.STDOUT_APPEND
+                            || parsed.redirectType == RedirectType.STDERR_APPEND);
         } catch (RuntimeException e) {
             reportRunError(parsed.command, e);
         }
@@ -325,6 +334,7 @@ public class Main {
     private enum RedirectType {
         STDOUT,
         STDERR,
-        STDOUT_APPEND
+        STDOUT_APPEND,
+        STDERR_APPEND
     }
 }
