@@ -93,7 +93,7 @@ public class Main {
             }
 
             if (!inSingleQuotes && !inDoubleQuotes) {
-                if (ch == '!' && i + 1 < inputString.length() && inputString.charAt(i + 1) == '>') {
+                if (ch == '1' && i + 1 < inputString.length() && inputString.charAt(i + 1) == '>') {
                     return new SplitResult(inputString.substring(0, i),
                                            inputString.substring(i + 2));
                 }
@@ -281,9 +281,7 @@ public class Main {
         }
     }
 
-    public record ParsedLine(Command command, String redirectPart) {
-    }
+    public record ParsedLine(Command command, String redirectPart) {}
 
-    private record SplitResult(String left, String right) {
-    }
+    private record SplitResult(String left, String right) {}
 }

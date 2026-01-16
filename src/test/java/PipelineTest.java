@@ -21,7 +21,7 @@ public class PipelineTest {
 
     @Test
     void eval_splitsOnBangGreaterThan() {
-        Main.ParsedLine parsed = Main.parseLine("echo hello !> echo");
+        Main.ParsedLine parsed = Main.parseLine("echo hello 1> echo");
 
         String output = TestUtils.captureStdout(() -> Main.eval(parsed));
 
@@ -63,7 +63,7 @@ public class PipelineTest {
         Path output = tempDir.resolve("output.txt");
         Files.writeString(output, "old" + System.lineSeparator());
 
-        Main.ParsedLine parsed = Main.parseLine("echo new !> output.txt");
+        Main.ParsedLine parsed = Main.parseLine("echo new 1> output.txt");
         Main.eval(parsed);
 
         String content = Files.readString(output);
