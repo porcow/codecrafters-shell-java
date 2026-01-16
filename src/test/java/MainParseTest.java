@@ -33,4 +33,39 @@ public class MainParseTest {
 
         assertEquals(List.of("shell's test"), command.getArgList());
     }
+
+    @Test
+    void parse_preservesEscapedSpacesOutsideQuotes() {
+        Command command = Main.parse("echo three\\ \\ \\ spaces");
+
+        assertEquals(List.of("three   spaces"), command.getArgList());
+    }
+
+    @Test
+    void parse_collapsesUnescapedSpacesAfterEscapedSpace() {
+        Command command = Main.parse("echo before\\     after");
+
+        assertEquals(List.of("before ", "after"), command.getArgList());
+    }
+
+    @Test
+    void parse_treatsEscapedCharactersLiterally() {
+        Command command = Main.parse("echo test\\nexample");
+
+        assertEquals(List.of("testnexample"), command.getArgList());
+    }
+
+    @Test
+    void parse_escapesBackslashOutsideQuotes() {
+        Command command = Main.parse("echo hello\\\\world");
+
+        assertEquals(List.of("hello\\world"), command.getArgList());
+    }
+
+    @Test
+    void parse_escapesSingleQuotesOutsideQuotes() {
+        Command command = Main.parse("echo \\'hello\\'");
+
+        assertEquals(List.of("'hello'"), command.getArgList());
+    }
 }

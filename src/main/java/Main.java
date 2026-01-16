@@ -10,6 +10,7 @@ import java.util.List;
 
 public class Main {
 
+    private static final Scanner SCANNER = new Scanner(System.in);
     final static Map<String, CCRunnable> builtinMap = new HashMap<String, CCRunnable>() {{
             put("echo", EchoCommand.getInstance());
             put("exit", ExitCommand.getInstance());
@@ -29,8 +30,7 @@ public class Main {
     }
 
     public static String read() {
-        Scanner scanner = new Scanner(System.in);
-        return scanner.nextLine();
+        return SCANNER.nextLine();
     }
 
     public static Command parse(String inputString) {
@@ -42,6 +42,19 @@ public class Main {
 
         for (int i = 0; i < inputString.length(); i++) {
             char ch = inputString.charAt(i);
+
+            // Outside quotes, backslash escapes the next character (including whitespace and quotes).
+            if (!inSingleQuotes && !inDoubleQuotes && ch == '\\') {
+                if (i + 1 < inputString.length()) {
+                    current.append(inputString.charAt(i + 1));
+                    tokenStarted = true;
+                    i++;
+                } else {
+                    current.append(ch);
+                    tokenStarted = true;
+                }
+                continue;
+            }
 
             if (ch == '\'' && !inDoubleQuotes) {
                 inSingleQuotes = !inSingleQuotes;
