@@ -68,4 +68,25 @@ public class MainParseTest {
 
         assertEquals(List.of("'hello'"), command.getArgList());
     }
+
+    @Test
+    void parse_escapesDoubleQuoteInsideDoubleQuotes() {
+        Command command = Main.parse("echo \"hello\\\"world\"");
+
+        assertEquals(List.of("hello\"world"), command.getArgList());
+    }
+
+    @Test
+    void parse_escapesBackslashInsideDoubleQuotes() {
+        Command command = Main.parse("echo \"hello\\\\world\"");
+
+        assertEquals(List.of("hello\\world"), command.getArgList());
+    }
+
+    @Test
+    void parse_keepsOtherBackslashesLiteralInsideDoubleQuotes() {
+        Command command = Main.parse("echo \"test\\nexample\"");
+
+        assertEquals(List.of("test\\nexample"), command.getArgList());
+    }
 }

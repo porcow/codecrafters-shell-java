@@ -56,6 +56,21 @@ public class Main {
                 continue;
             }
 
+            if (inDoubleQuotes && ch == '\\') {
+                if (i + 1 < inputString.length()) {
+                    char next = inputString.charAt(i + 1);
+                    if (next == '"' || next == '\\') {
+                        current.append(next);
+                        tokenStarted = true;
+                        i++;
+                        continue;
+                    }
+                }
+                current.append(ch);
+                tokenStarted = true;
+                continue;
+            }
+
             if (ch == '\'' && !inDoubleQuotes) {
                 inSingleQuotes = !inSingleQuotes;
                 tokenStarted = true;
