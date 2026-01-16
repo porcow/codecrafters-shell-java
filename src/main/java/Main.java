@@ -54,7 +54,7 @@ public class Main {
     public static ParsedLine parseLine(String inputString) {
         SplitResult split = splitRedirection(inputString);
         Command command = parse(split.left);
-        return new ParsedLine(command, split.right);
+        return new ParsedLine(command, split.right, split.type);
     }
 
     private static SplitResult splitRedirection(String inputString) {
@@ -64,7 +64,7 @@ public class Main {
         for (int i = 0; i < inputString.length(); i++) {
             char ch = inputString.charAt(i);
 
-            // Only split on > or !> when we're not inside quotes or escapes.
+            // Only split on >, 1>, or 2> when we're not inside quotes or escapes.
             if (!inSingleQuotes && !inDoubleQuotes && ch == '\\') {
                 if (i + 1 < inputString.length()) {
                     i++;
@@ -93,18 +93,25 @@ public class Main {
             }
 
             if (!inSingleQuotes && !inDoubleQuotes) {
+                if (ch == '2' && i + 1 < inputString.length() && inputString.charAt(i + 1) == '>') {
+                    return new SplitResult(inputString.substring(0, i),
+                                           inputString.substring(i + 2),
+                                           RedirectType.STDERR);
+                }
                 if (ch == '1' && i + 1 < inputString.length() && inputString.charAt(i + 1) == '>') {
                     return new SplitResult(inputString.substring(0, i),
-                                           inputString.substring(i + 2));
+                                           inputString.substring(i + 2),
+                                           RedirectType.STDOUT);
                 }
                 if (ch == '>') {
                     return new SplitResult(inputString.substring(0, i),
-                                           inputString.substring(i + 1));
+                                           inputString.substring(i + 1),
+                                           RedirectType.STDOUT);
                 }
             }
         }
 
-        return new SplitResult(inputString, null);
+        return new SplitResult(inputString, null, null);
     }
 
     private static List<String> tokenize(String inputString) {
@@ -201,7 +208,11 @@ public class Main {
                 return;
             }
             try {
-                runner.stdout(parsed.command, rightCommand);
+                if (parsed.redirectType == RedirectType.STDERR) {
+                    runner.stderr(parsed.command, rightCommand);
+                } else {
+                    runner.stdout(parsed.command, rightCommand);
+                }
             } catch (RuntimeException e) {
                 reportRunError(parsed.command, e);
                 return;
@@ -217,7 +228,11 @@ public class Main {
         }
         Command sink = new Command();
         try {
-            runner.stdout(parsed.command, sink);
+            if (parsed.redirectType == RedirectType.STDERR) {
+                runner.stderr(parsed.command, sink);
+            } else {
+                runner.stdout(parsed.command, sink);
+            }
             writeRedirectOutput(parsed.command, redirectTokens.get(0), sink.getArgString());
         } catch (RuntimeException e) {
             reportRunError(parsed.command, e);
@@ -255,6 +270,7 @@ public class Main {
         if (message == null || message.isBlank()) {
             message = e.toString();
         }
+
         System.err.println(command.getName() + ": " + message);
     }
 
@@ -281,7 +297,12 @@ public class Main {
         }
     }
 
-    public record ParsedLine(Command command, String redirectPart) {}
+    public record ParsedLine(Command command, String redirectPart, RedirectType redirectType) {}
 
-    private record SplitResult(String left, String right) {}
+    private record SplitResult(String left, String right, RedirectType type) {}
+
+    private enum RedirectType {
+        STDOUT,
+        STDERR
+    }
 }

@@ -1,4 +1,5 @@
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,7 +21,7 @@ public class PipelineTest {
     }
 
     @Test
-    void eval_splitsOnBangGreaterThan() {
+    void eval_splitsOnOneGreaterThan() {
         Main.ParsedLine parsed = Main.parseLine("echo hello 1> echo");
 
         String output = TestUtils.captureStdout(() -> Main.eval(parsed));
@@ -68,5 +69,30 @@ public class PipelineTest {
 
         String content = Files.readString(output);
         assertEquals("new" + System.lineSeparator(), content);
+    }
+
+    @Test
+    void eval_redirectsStderrToFile() throws Exception {
+        Command.setCurrentWorkspace(tempDir.toAbsolutePath().toString());
+        Files.writeString(tempDir.resolve("existing.txt"), "contents" + System.lineSeparator());
+        Main.ParsedLine parsed = Main.parseLine("cat existing.txt missing.txt 2> errors.txt");
+
+        String output = TestUtils.captureStdout(() -> Main.eval(parsed));
+
+        assertEquals("contents" + System.lineSeparator(), output);
+        String errorContent = Files.readString(tempDir.resolve("errors.txt"));
+        assertTrue(errorContent.contains("missing.txt"));
+    }
+
+
+    @Test
+    void eval_redirectsStderrToRunnableCommand() {
+        Command.setCurrentWorkspace(tempDir.toAbsolutePath().toString());
+        Main.ParsedLine parsed = Main.parseLine("cat missing.txt 2> echo");
+
+        String output = TestUtils.captureStdout(() -> Main.eval(parsed));
+
+        assertTrue(output.contains("cat:"));
+        assertTrue(output.contains("No such file or directory"));
     }
 }

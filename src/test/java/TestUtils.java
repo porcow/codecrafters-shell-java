@@ -9,7 +9,7 @@ public final class TestUtils {
     private TestUtils() {
     }
 
-    public static String captureStdout(java.lang.Runnable action) {
+    public static String captureStdout(Runnable action) {
         PrintStream originalOut = System.out;
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8);
