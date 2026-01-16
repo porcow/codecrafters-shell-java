@@ -3,6 +3,10 @@ import java.util.Map;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 
 public class Main {
 
@@ -20,8 +24,8 @@ public class Main {
         while (true) {
             System.out.print("$ ");
             String input = read();
-            List<Command> commands = parsePipeline(input);
-            eval(commands);
+            ParsedLine parsed = parseLine(input);
+            eval(parsed);
         }
     }
 
@@ -47,35 +51,23 @@ public class Main {
         return tokenize(inputString);
     }
 
-    public static List<Command> parsePipeline(String inputString) {
-        List<String> parts = splitRedirections(inputString);
-        List<Command> commands = new ArrayList<>();
-        for (String part : parts) {
-            Command command = parse(part);
-            if (command.getName() != null && !command.getName().isBlank()) {
-                commands.add(command);
-            }
-        }
-        return commands;
+    public static ParsedLine parseLine(String inputString) {
+        SplitResult split = splitRedirection(inputString);
+        Command command = parse(split.left);
+        return new ParsedLine(command, split.right);
     }
 
-    private static List<String> splitRedirections(String inputString) {
-        List<String> parts = new ArrayList<>();
-        StringBuilder current = new StringBuilder();
+    private static SplitResult splitRedirection(String inputString) {
         boolean inSingleQuotes = false;
         boolean inDoubleQuotes = false;
 
         for (int i = 0; i < inputString.length(); i++) {
             char ch = inputString.charAt(i);
 
-            // Only split on > or 1> when we're not inside quotes or escapes.
+            // Only split on > or !> when we're not inside quotes or escapes.
             if (!inSingleQuotes && !inDoubleQuotes && ch == '\\') {
                 if (i + 1 < inputString.length()) {
-                    current.append(ch);
-                    current.append(inputString.charAt(i + 1));
                     i++;
-                } else {
-                    current.append(ch);
                 }
                 continue;
             }
@@ -83,49 +75,36 @@ public class Main {
             if (inDoubleQuotes && ch == '\\') {
                 if (i + 1 < inputString.length()) {
                     char next = inputString.charAt(i + 1);
-                    current.append(ch);
                     if (next == '"' || next == '\\') {
-                        current.append(next);
                         i++;
-                        continue;
                     }
-                } else {
-                    current.append(ch);
                 }
                 continue;
             }
 
             if (ch == '\'' && !inDoubleQuotes) {
                 inSingleQuotes = !inSingleQuotes;
-                current.append(ch);
                 continue;
             }
 
             if (ch == '"' && !inSingleQuotes) {
                 inDoubleQuotes = !inDoubleQuotes;
-                current.append(ch);
                 continue;
             }
 
             if (!inSingleQuotes && !inDoubleQuotes) {
-                if (ch == '1' && i + 1 < inputString.length() && inputString.charAt(i + 1) == '>') {
-                    parts.add(current.toString());
-                    current.setLength(0);
-                    i++;
-                    continue;
+                if (ch == '!' && i + 1 < inputString.length() && inputString.charAt(i + 1) == '>') {
+                    return new SplitResult(inputString.substring(0, i),
+                                           inputString.substring(i + 2));
                 }
                 if (ch == '>') {
-                    parts.add(current.toString());
-                    current.setLength(0);
-                    continue;
+                    return new SplitResult(inputString.substring(0, i),
+                                           inputString.substring(i + 1));
                 }
             }
-
-            current.append(ch);
         }
 
-        parts.add(current.toString());
-        return parts;
+        return new SplitResult(inputString, null);
     }
 
     private static List<String> tokenize(String inputString) {
@@ -198,28 +177,51 @@ public class Main {
         return tokens;
     }
 
-    public static void eval(List<Command> commands) {
-        if (commands == null || commands.isEmpty()) {
+    public static void eval(ParsedLine parsed) {
+        if (parsed == null || parsed.command == null) {
             return;
         }
 
-        for (int i = 0; i < commands.size() - 1; i++) {
-            Command current = commands.get(i);
-            Command next = commands.get(i + 1);
-            CCRunnable runner = resolveRunner(current);
+        if (parsed.redirectPart == null || parsed.redirectPart.isBlank()) {
+            runCommand(parsed.command);
+            return;
+        }
+
+        List<String> redirectTokens = tokenize(parsed.redirectPart);
+        if (redirectTokens.isEmpty()) {
+            runCommand(parsed.command);
+            return;
+        }
+
+        Command rightCommand = parse(parsed.redirectPart);
+        if (isRunnableCommand(rightCommand)) {
+            CCRunnable runner = resolveRunner(parsed.command);
             if (runner == null) {
-                System.out.println(current.getName() + ": command not found");
+                System.out.println(parsed.command.getName() + ": command not found");
                 return;
             }
             try {
-                runner.stdout(current, next);
+                runner.stdout(parsed.command, rightCommand);
             } catch (RuntimeException e) {
-                reportRunError(current, e);
+                reportRunError(parsed.command, e);
                 return;
             }
+            runCommand(rightCommand);
+            return;
         }
 
-        runCommand(commands.get(commands.size() - 1));
+        CCRunnable runner = resolveRunner(parsed.command);
+        if (runner == null) {
+            System.out.println(parsed.command.getName() + ": command not found");
+            return;
+        }
+        Command sink = new Command();
+        try {
+            runner.stdout(parsed.command, sink);
+            writeRedirectOutput(parsed.command, redirectTokens.get(0), sink.getArgString());
+        } catch (RuntimeException e) {
+            reportRunError(parsed.command, e);
+        }
     }
 
     private static void runCommand(Command command) {
@@ -254,5 +256,34 @@ public class Main {
             message = e.toString();
         }
         System.err.println(command.getName() + ": " + message);
+    }
+
+    private static boolean isRunnableCommand(Command command) {
+        return command != null && command.getName() != null
+                && (command.isBuiltin() || command.isRunable());
+    }
+
+    private static void writeRedirectOutput(Command command, String redirectPath, String output) {
+        try {
+            Path path = Path.of(redirectPath);
+            if (!path.isAbsolute()) {
+                String base = command.getWorkspace();
+                if (base == null || base.isBlank()) {
+                    base = System.getProperty("user.dir");
+                }
+                path = Path.of(base).resolve(redirectPath);
+            }
+            String content = output == null ? "" : output;
+            Files.writeString(path.normalize(), content, StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage(), e);
+        }
+    }
+
+    public record ParsedLine(Command command, String redirectPart) {
+    }
+
+    private record SplitResult(String left, String right) {
     }
 }
