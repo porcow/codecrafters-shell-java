@@ -37,18 +37,25 @@ public class Main {
         List<String> tokens = new ArrayList<>();
         StringBuilder current = new StringBuilder();
         boolean inSingleQuotes = false;
+        boolean inDoubleQuotes = false;
         boolean tokenStarted = false;
 
         for (int i = 0; i < inputString.length(); i++) {
             char ch = inputString.charAt(i);
 
-            if (ch == '\'') {
+            if (ch == '\'' && !inDoubleQuotes) {
                 inSingleQuotes = !inSingleQuotes;
                 tokenStarted = true;
                 continue;
             }
 
-            if (!inSingleQuotes && Character.isWhitespace(ch)) {
+            if (ch == '"' && !inSingleQuotes) {
+                inDoubleQuotes = !inDoubleQuotes;
+                tokenStarted = true;
+                continue;
+            }
+
+            if (!inSingleQuotes && !inDoubleQuotes && Character.isWhitespace(ch)) {
                 if (tokenStarted) {
                     tokens.add(current.toString());
                     current.setLength(0);
