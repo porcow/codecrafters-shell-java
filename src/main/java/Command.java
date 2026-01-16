@@ -12,7 +12,7 @@ public class Command {
     private String argString;
     private List<String> argList;
     private String workspace;
-    static String currentWorkspace = System.getenv("HOME");
+    static String currentWorkspace = System.getProperty("user.dir");
 
     public Command() {
         this.argList = new ArrayList<>();

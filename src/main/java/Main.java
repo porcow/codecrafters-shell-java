@@ -301,7 +301,7 @@ public class Main {
             if (!path.isAbsolute()) {
                 String base = command.getWorkspace();
                 if (base == null || base.isBlank()) {
-                    base = System.getenv("HOME");
+                    base = System.getProperty("user.dir");
                 }
                 path = Path.of(base).resolve(redirectPath);
             }
