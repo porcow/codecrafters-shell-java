@@ -17,7 +17,7 @@ public class EchoCommand implements CCRunnable {
             System.out.println();
             return;
         }
-
         System.out.println(String.join(" ", cmd.getArgList()));
     }
+
 }

@@ -1,8 +1,4 @@
 import java.util.Scanner;
-import java.io.IOException;
-import java.io.File;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -24,8 +20,8 @@ public class Main {
         while (true) {
             System.out.print("$ ");
             String input = read();
-            Command cmd = parse(input);
-            eval(cmd);
+            List<Command> commands = parsePipeline(input);
+            eval(commands);
         }
     }
 
@@ -34,6 +30,105 @@ public class Main {
     }
 
     public static Command parse(String inputString) {
+        List<String> tokens = tokenize(inputString);
+
+        String commandName = tokens.isEmpty() ? null : tokens.get(0);
+        List<String> argList = tokens.size() > 1
+                ? new ArrayList<>(tokens.subList(1, tokens.size()))
+                : new ArrayList<>();
+        String commandArgs = String.join(" ", argList);
+
+        Command command = Command.build(commandName, commandArgs);
+        command.setArgList(argList);
+        return command;
+    }
+
+    public static List<String> parseArguments(String inputString) {
+        return tokenize(inputString);
+    }
+
+    public static List<Command> parsePipeline(String inputString) {
+        List<String> parts = splitRedirections(inputString);
+        List<Command> commands = new ArrayList<>();
+        for (String part : parts) {
+            Command command = parse(part);
+            if (command.getName() != null && !command.getName().isBlank()) {
+                commands.add(command);
+            }
+        }
+        return commands;
+    }
+
+    private static List<String> splitRedirections(String inputString) {
+        List<String> parts = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inSingleQuotes = false;
+        boolean inDoubleQuotes = false;
+
+        for (int i = 0; i < inputString.length(); i++) {
+            char ch = inputString.charAt(i);
+
+            // Only split on > or 1> when we're not inside quotes or escapes.
+            if (!inSingleQuotes && !inDoubleQuotes && ch == '\\') {
+                if (i + 1 < inputString.length()) {
+                    current.append(ch);
+                    current.append(inputString.charAt(i + 1));
+                    i++;
+                } else {
+                    current.append(ch);
+                }
+                continue;
+            }
+
+            if (inDoubleQuotes && ch == '\\') {
+                if (i + 1 < inputString.length()) {
+                    char next = inputString.charAt(i + 1);
+                    current.append(ch);
+                    if (next == '"' || next == '\\') {
+                        current.append(next);
+                        i++;
+                        continue;
+                    }
+                } else {
+                    current.append(ch);
+                }
+                continue;
+            }
+
+            if (ch == '\'' && !inDoubleQuotes) {
+                inSingleQuotes = !inSingleQuotes;
+                current.append(ch);
+                continue;
+            }
+
+            if (ch == '"' && !inSingleQuotes) {
+                inDoubleQuotes = !inDoubleQuotes;
+                current.append(ch);
+                continue;
+            }
+
+            if (!inSingleQuotes && !inDoubleQuotes) {
+                if (ch == '1' && i + 1 < inputString.length() && inputString.charAt(i + 1) == '>') {
+                    parts.add(current.toString());
+                    current.setLength(0);
+                    i++;
+                    continue;
+                }
+                if (ch == '>') {
+                    parts.add(current.toString());
+                    current.setLength(0);
+                    continue;
+                }
+            }
+
+            current.append(ch);
+        }
+
+        parts.add(current.toString());
+        return parts;
+    }
+
+    private static List<String> tokenize(String inputString) {
         List<String> tokens = new ArrayList<>();
         StringBuilder current = new StringBuilder();
         boolean inSingleQuotes = false;
@@ -100,53 +195,64 @@ public class Main {
             tokens.add(current.toString());
         }
 
-        String commandName = tokens.isEmpty() ? null : tokens.get(0);
-        List<String> argList = tokens.size() > 1
-                ? new ArrayList<>(tokens.subList(1, tokens.size()))
-                : new ArrayList<>();
-        String commandArgs = String.join(" ", argList);
-
-        Command command = Command.build(commandName, commandArgs);
-        command.setArgList(argList);
-        return command;
+        return tokens;
     }
 
-    public static void eval(Command command) {
-        if (command.isBuiltin()) {
-            CCRunnable builtin = builtinMap.get(command.getName());
-            if (builtin != null) {
-                builtin.run(command);
+    public static void eval(List<Command> commands) {
+        if (commands == null || commands.isEmpty()) {
+            return;
+        }
+
+        for (int i = 0; i < commands.size() - 1; i++) {
+            Command current = commands.get(i);
+            Command next = commands.get(i + 1);
+            CCRunnable runner = resolveRunner(current);
+            if (runner == null) {
+                System.out.println(current.getName() + ": command not found");
                 return;
             }
-        } else if (command.isRunable()) {
-            List<String> cmd = new ArrayList<>();
-            cmd.add(command.getName());
-
-            List<String> args = command.getArgList();
-            if (args != null && !args.isEmpty()) {
-                cmd.addAll(args);
-            }
-
             try {
-                Process process = new ProcessBuilder(cmd)
-                        .directory(new File(command.getWorkspace()))
-                        .redirectErrorStream(true)
-                        .start();
-                try (BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(process.getInputStream()))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        System.out.println(line);
-                    }
-                }
-                process.waitFor();
-            } catch (IOException e) {
-                System.out.println(command.getName() + ": " + e.getMessage());
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+                runner.stdout(current, next);
+            } catch (RuntimeException e) {
+                reportRunError(current, e);
+                return;
             }
-        } else {
-            System.out.println(command.getName() + ": command not found");
         }
+
+        runCommand(commands.get(commands.size() - 1));
+    }
+
+    private static void runCommand(Command command) {
+        CCRunnable runner = resolveRunner(command);
+        if (runner == null) {
+            System.out.println(command.getName() + ": command not found");
+            return;
+        }
+        try {
+            runner.run(command);
+        } catch (RuntimeException e) {
+            reportRunError(command, e);
+        }
+    }
+
+    private static CCRunnable resolveRunner(Command command) {
+        if (command == null || command.getName() == null || command.getName().isBlank()) {
+            return null;
+        }
+        if (command.isBuiltin()) {
+            return builtinMap.get(command.getName());
+        }
+        if (command.isRunable()) {
+            return ExternalCommand.getInstance();
+        }
+        return null;
+    }
+
+    private static void reportRunError(Command command, RuntimeException e) {
+        String message = e.getMessage();
+        if (message == null || message.isBlank()) {
+            message = e.toString();
+        }
+        System.err.println(command.getName() + ": " + message);
     }
 }
