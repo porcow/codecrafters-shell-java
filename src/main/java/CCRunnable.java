@@ -17,7 +17,7 @@ public interface CCRunnable {
         target.setArgList(Main.parseArguments(output));
     }
 
-    private static String captureStream(boolean stdout, java.lang.Runnable action) {
+    private static String captureStream(boolean stdout, Runnable action) {
         PrintStream original = stdout ? System.out : System.err;
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8);

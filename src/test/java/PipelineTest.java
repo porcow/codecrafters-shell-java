@@ -72,6 +72,30 @@ public class PipelineTest {
     }
 
     @Test
+    void eval_appendsWithDoubleGreaterThan() throws Exception {
+        Command.setCurrentWorkspace(tempDir.toAbsolutePath().toString());
+        Path output = tempDir.resolve("append.txt");
+
+        Main.eval(Main.parseLine("echo first >> append.txt"));
+        Main.eval(Main.parseLine("echo second >> append.txt"));
+
+        String content = Files.readString(output);
+        assertEquals("first" + System.lineSeparator() + "second" + System.lineSeparator(), content);
+    }
+
+    @Test
+    void eval_appendsWithOneDoubleGreaterThan() throws Exception {
+        Command.setCurrentWorkspace(tempDir.toAbsolutePath().toString());
+        Path output = tempDir.resolve("append-one.txt");
+
+        Main.eval(Main.parseLine("echo first 1>> append-one.txt"));
+        Main.eval(Main.parseLine("echo second 1>> append-one.txt"));
+
+        String content = Files.readString(output);
+        assertEquals("first" + System.lineSeparator() + "second" + System.lineSeparator(), content);
+    }
+
+    @Test
     void eval_redirectsStderrToFile() throws Exception {
         Command.setCurrentWorkspace(tempDir.toAbsolutePath().toString());
         Files.writeString(tempDir.resolve("existing.txt"), "contents" + System.lineSeparator());

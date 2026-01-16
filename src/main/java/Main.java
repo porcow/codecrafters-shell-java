@@ -64,7 +64,7 @@ public class Main {
         for (int i = 0; i < inputString.length(); i++) {
             char ch = inputString.charAt(i);
 
-            // Only split on >, 1>, or 2> when we're not inside quotes or escapes.
+            // Only split on >, 1>, 2>, >>, or 1>> when we're not inside quotes or escapes.
             if (!inSingleQuotes && !inDoubleQuotes && ch == '\\') {
                 if (i + 1 < inputString.length()) {
                     i++;
@@ -99,11 +99,21 @@ public class Main {
                                            RedirectType.STDERR);
                 }
                 if (ch == '1' && i + 1 < inputString.length() && inputString.charAt(i + 1) == '>') {
+                    if (i + 2 < inputString.length() && inputString.charAt(i + 2) == '>') {
+                        return new SplitResult(inputString.substring(0, i),
+                                               inputString.substring(i + 3),
+                                               RedirectType.STDOUT_APPEND);
+                    }
                     return new SplitResult(inputString.substring(0, i),
                                            inputString.substring(i + 2),
                                            RedirectType.STDOUT);
                 }
                 if (ch == '>') {
+                    if (i + 1 < inputString.length() && inputString.charAt(i + 1) == '>') {
+                        return new SplitResult(inputString.substring(0, i),
+                                               inputString.substring(i + 2),
+                                               RedirectType.STDOUT_APPEND);
+                    }
                     return new SplitResult(inputString.substring(0, i),
                                            inputString.substring(i + 1),
                                            RedirectType.STDOUT);
@@ -201,7 +211,7 @@ public class Main {
         }
 
         Command rightCommand = parse(parsed.redirectPart);
-        if (isRunnableCommand(rightCommand)) {
+        if (parsed.redirectType != RedirectType.STDOUT_APPEND && isRunnableCommand(rightCommand)) {
             CCRunnable runner = resolveRunner(parsed.command);
             if (runner == null) {
                 System.out.println(parsed.command.getName() + ": command not found");
@@ -233,7 +243,10 @@ public class Main {
             } else {
                 runner.stdout(parsed.command, sink);
             }
-            writeRedirectOutput(parsed.command, redirectTokens.get(0), sink.getArgString());
+            writeRedirectOutput(parsed.command,
+                    redirectTokens.get(0),
+                    sink.getArgString(),
+                    parsed.redirectType == RedirectType.STDOUT_APPEND);
         } catch (RuntimeException e) {
             reportRunError(parsed.command, e);
         }
@@ -279,19 +292,27 @@ public class Main {
                 && (command.isBuiltin() || command.isRunable());
     }
 
-    private static void writeRedirectOutput(Command command, String redirectPath, String output) {
+    private static void writeRedirectOutput(Command command,
+                                            String redirectPath,
+                                            String output,
+                                            boolean append) {
         try {
             Path path = Path.of(redirectPath);
             if (!path.isAbsolute()) {
                 String base = command.getWorkspace();
                 if (base == null || base.isBlank()) {
-                    base = System.getProperty("user.dir");
+                    base = System.getenv("HOME");
                 }
                 path = Path.of(base).resolve(redirectPath);
             }
             String content = output == null ? "" : output;
-            Files.writeString(path.normalize(), content, StandardCharsets.UTF_8,
-                    StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            if (append) {
+                Files.writeString(path.normalize(), content, StandardCharsets.UTF_8,
+                        StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            } else {
+                Files.writeString(path.normalize(), content, StandardCharsets.UTF_8,
+                        StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            }
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage(), e);
         }
@@ -303,6 +324,7 @@ public class Main {
 
     private enum RedirectType {
         STDOUT,
-        STDERR
+        STDERR,
+        STDOUT_APPEND
     }
 }

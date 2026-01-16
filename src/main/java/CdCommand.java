@@ -44,7 +44,7 @@ public class CdCommand implements CCRunnable {
         } else {
             String base = Command.getCurrentWorkspace();
             if (base == null || base.isBlank()) {
-                base = System.getProperty("user.dir");
+                base = System.getenv("HOME");
             }
             dirPath = Path.of(base).resolve(target).normalize();
         }
