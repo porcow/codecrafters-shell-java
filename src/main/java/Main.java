@@ -7,10 +7,21 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import org.jline.reader.Candidate;
+import org.jline.reader.Completer;
+import org.jline.reader.EndOfFileException;
+import org.jline.reader.LineReader;
+import org.jline.reader.LineReaderBuilder;
+import org.jline.reader.UserInterruptException;
+import org.jline.terminal.Terminal;
+import org.jline.terminal.TerminalBuilder;
 
 public class Main {
 
     private static final Scanner SCANNER = new Scanner(System.in);
+    private static final String PROMPT = "$ ";
+    private static final String[] AUTOCOMPLETE_BUILTINS = {"echo", "exit"};
+    private static final LineReader LINE_READER = buildLineReader();
     final static Map<String, CCRunnable> builtinMap = new HashMap<String, CCRunnable>() {{
             put("echo", EchoCommand.getInstance());
             put("exit", ExitCommand.getInstance());
@@ -22,7 +33,6 @@ public class Main {
     public static void main(String[] args) throws Exception {
 
         while (true) {
-            System.out.print("$ ");
             String input = read();
             ParsedLine parsed = parseLine(input);
             eval(parsed);
@@ -30,7 +40,67 @@ public class Main {
     }
 
     public static String read() {
+        if (LINE_READER != null) {
+            try {
+                return LINE_READER.readLine(PROMPT);
+            } catch (UserInterruptException e) {
+                return "";
+            } catch (EndOfFileException e) {
+                System.out.println();
+                System.exit(0);
+            }
+        }
+
+        System.out.print(PROMPT);
+        System.out.flush();
         return SCANNER.nextLine();
+    }
+
+    private static String uniqueBuiltinMatch(String token) {
+        if (token == null || token.isEmpty()) {
+            return null;
+        }
+        String match = null;
+        for (String builtin : AUTOCOMPLETE_BUILTINS) {
+            if (builtin.startsWith(token)) {
+                if (match != null) {
+                    return null;
+                }
+                match = builtin;
+            }
+        }
+        return match;
+    }
+
+    private static LineReader buildLineReader() {
+        try {
+            Terminal terminal = TerminalBuilder.builder()
+                    .system(true)
+                    .build();
+            Completer completer = new BuiltinCompleter();
+            return LineReaderBuilder.builder()
+                    .terminal(terminal)
+                    .completer(completer)
+                    .build();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static final class BuiltinCompleter implements Completer {
+        @Override
+        public void complete(LineReader reader,
+                             org.jline.reader.ParsedLine line,
+                             List<Candidate> candidates) {
+            if (line.wordIndex() != 0) {
+                return;
+            }
+            String match = uniqueBuiltinMatch(line.word());
+            if (match == null) {
+                return;
+            }
+            candidates.add(new Candidate(match, match, null, null, " ", null, true));
+        }
     }
 
     public static Command parse(String inputString) {
