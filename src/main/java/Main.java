@@ -73,6 +73,9 @@ public class Main {
     }
 
     private static LineReader buildLineReader() {
+        if (System.console() == null) {
+            return null;
+        }
         try {
             Terminal terminal = TerminalBuilder.builder()
                     .system(true)
