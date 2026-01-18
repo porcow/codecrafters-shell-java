@@ -2,6 +2,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+
+import org.junit.jupiter.api.Assumptions;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -32,5 +35,31 @@ public class CdCommandTest {
         String output = TestUtils.captureStdout(() -> CdCommand.getInstance().run(command));
 
         assertEquals("cd: missing: No such file or directory" + System.lineSeparator(), output);
+    }
+
+    @Test
+    void run_expandsTildeToHome() {
+        String home = System.getenv("HOME");
+        Assumptions.assumeTrue(home != null && !home.isBlank());
+        Command.setCurrentWorkspace(tempDir.toAbsolutePath().toString());
+
+        Command command = Command.build("cd", "");
+        command.setArgList(List.of("~"));
+        CdCommand.getInstance().run(command);
+
+        assertEquals(Path.of(home).normalize().toString(), Command.getCurrentWorkspace());
+    }
+
+    @Test
+    void run_defaultsToHomeWhenArgsEmpty() {
+        String home = System.getenv("HOME");
+        Assumptions.assumeTrue(home != null && !home.isBlank());
+        Command.setCurrentWorkspace(tempDir.toAbsolutePath().toString());
+
+        Command command = Command.build("cd", "");
+        command.setArgList(List.of());
+        CdCommand.getInstance().run(command);
+
+        assertEquals(Path.of(home).normalize().toString(), Command.getCurrentWorkspace());
     }
 }

@@ -2,6 +2,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
 public class TypeCommandTest {
@@ -18,5 +19,17 @@ public class TypeCommandTest {
                 missing + ": not found",
                 "");
         assertEquals(expected, output);
+    }
+
+    @Test
+    void run_reportsExternalCommandPath() {
+        String shPath = Command.findExecutable("sh");
+        Assumptions.assumeTrue(shPath != null && !shPath.isBlank());
+        Command command = Command.build("type", "");
+        command.setArgList(List.of("sh"));
+
+        String output = TestUtils.captureStdout(() -> TypeCommand.getInstance().run(command));
+
+        assertEquals("sh is " + shPath + System.lineSeparator(), output);
     }
 }

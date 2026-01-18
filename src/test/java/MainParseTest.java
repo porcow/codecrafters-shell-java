@@ -35,6 +35,42 @@ public class MainParseTest {
     }
 
     @Test
+    void parse_preservesWhitespaceInsideSingleQuotes() {
+        Command command = Main.parse("echo 'hello    world'");
+
+        assertEquals(List.of("hello    world"), command.getArgList());
+    }
+
+    @Test
+    void parse_concatenatesAdjacentSingleQuotedStrings() {
+        Command command = Main.parse("echo 'hello''world'");
+
+        assertEquals(List.of("helloworld"), command.getArgList());
+    }
+
+    @Test
+    void parse_splitsOnWhitespaceOutsideSingleQuotes() {
+        Command command = Main.parse("echo 'hello' 'world'");
+
+        assertEquals(List.of("hello", "world"), command.getArgList());
+    }
+
+    @Test
+    void parse_keepsBackslashesLiteralInsideSingleQuotes() {
+        Command command = Main.parse("echo 'test\\nexample'");
+
+        assertEquals(List.of("test\\nexample"), command.getArgList());
+    }
+
+    @Test
+    void parse_parsesQuotedExecutableNameWithSingleQuotes() {
+        Command command = Main.parse("'exe  with  space' arg");
+
+        assertEquals("exe  with  space", command.getName());
+        assertEquals(List.of("arg"), command.getArgList());
+    }
+
+    @Test
     void parse_preservesEscapedSpacesOutsideQuotes() {
         Command command = Main.parse("echo three\\ \\ \\ spaces");
 

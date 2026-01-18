@@ -23,6 +23,20 @@ public final class TestUtils {
         return buffer.toString(StandardCharsets.UTF_8);
     }
 
+    public static String captureStderr(Runnable action) {
+        PrintStream originalErr = System.err;
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8);
+        System.setErr(capture);
+        try {
+            action.run();
+        } finally {
+            System.err.flush();
+            System.setErr(originalErr);
+        }
+        return buffer.toString(StandardCharsets.UTF_8);
+    }
+
     public static Command commandWithArgs(String name, String... args) {
         List<String> argList = new ArrayList<>(Arrays.asList(args));
         Command command = Command.build(name, String.join(" ", argList));
