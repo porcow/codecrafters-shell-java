@@ -70,6 +70,15 @@ public class Command {
     }
 
     public static String findExecutable(String name) {
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+
+        File direct = new File(name);
+        if (direct.isAbsolute() && direct.isFile() && direct.canExecute()) {
+            return direct.getAbsolutePath();
+        }
+
         String pathEnv = System.getenv("PATH");
         if (pathEnv == null || pathEnv.isBlank()) {
             return null;
