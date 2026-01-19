@@ -128,24 +128,12 @@ public class Command {
         return runable;
     }
 
-    public void setRunable(boolean runable) {
-        this.runable = runable;
-    }
-
     public String getName() {
         return name;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
     public boolean isBuiltin() {
         return builtin;
-    }
-
-    public void setBuiltin(boolean builtin) {
-        this.builtin = builtin;
     }
 
     public String getPath() {

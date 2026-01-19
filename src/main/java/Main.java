@@ -13,6 +13,7 @@ import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.UserInterruptException;
+import org.jline.reader.impl.DefaultParser;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 
@@ -80,9 +81,12 @@ public class Main {
             Terminal terminal = TerminalBuilder.builder()
                     .system(true)
                     .build();
+            DefaultParser parser = new DefaultParser();
+            parser.setEscapeChars(new char[0]);
             Completer completer = new BuiltinCompleter();
             return LineReaderBuilder.builder()
                     .terminal(terminal)
+                    .parser(parser)
                     .completer(completer)
                     .build();
         } catch (Exception e) {

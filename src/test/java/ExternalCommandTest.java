@@ -73,6 +73,19 @@ public class ExternalCommandTest {
         assertEquals("hello" + System.lineSeparator(), output);
     }
 
+
+    @Test
+    void run_usesResolvedPathForQuotedExecutableWithBackslashNNoSpace() throws Exception {
+        Path exec = writeEchoScript(tempDir.resolve("my \\necho"));
+        Assumptions.assumeTrue(Files.isExecutable(exec));
+        Command command = Main.parse("'my \\necho' hello");
+        command.setPath(exec.toString());
+
+        String output = TestUtils.captureStdout(() -> ExternalCommand.getInstance().run(command));
+
+        assertEquals("hello" + System.lineSeparator(), output);
+    }
+
     private Path writeEchoScript(Path path) throws Exception {
         String script = "#!/bin/sh\n" +
                 "echo \"$@\"\n";
