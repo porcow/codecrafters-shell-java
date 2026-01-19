@@ -3,6 +3,7 @@ import java.util.Map;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -73,6 +74,51 @@ public class Main {
         return match;
     }
 
+    private static String uniqueCommandMatch(String token) {
+        if (token == null || token.isEmpty()) {
+            return null;
+        }
+        String match = null;
+        for (String builtin : AUTOCOMPLETE_BUILTINS) {
+            if (builtin.startsWith(token)) {
+                if (match != null && !match.equals(builtin)) {
+                    return null;
+                }
+                match = builtin;
+            }
+        }
+
+        String pathEnv = System.getenv("PATH");
+        if (pathEnv == null || pathEnv.isBlank()) {
+            return match;
+        }
+        String[] dirs = pathEnv.split(File.pathSeparator);
+        for (String dir : dirs) {
+            if (dir == null) {
+                continue;
+            }
+            String dirPath = dir.isEmpty() ? "." : dir;
+            if (dirPath.isBlank()) {
+                continue;
+            }
+            File directory = new File(dirPath);
+            File[] entries = directory.listFiles();
+            if (entries == null) {
+                continue;
+            }
+            for (File entry : entries) {
+                String name = entry.getName();
+                if (entry.isFile() && entry.canExecute() && name.startsWith(token)) {
+                    if (match != null && !match.equals(name)) {
+                        return null;
+                    }
+                    match = name;
+                }
+            }
+        }
+        return match;
+    }
+
     private static LineReader buildLineReader() {
         if (System.console() == null) {
             return null;
@@ -102,7 +148,7 @@ public class Main {
             if (line.wordIndex() != 0) {
                 return;
             }
-            String match = uniqueBuiltinMatch(line.word());
+            String match = uniqueCommandMatch(line.word());
             if (match == null) {
                 return;
             }
@@ -333,6 +379,17 @@ public class Main {
         List<String> argList = tokens.size() > 1
                 ? new ArrayList<>(tokens.subList(1, tokens.size()))
                 : new ArrayList<>();
+
+        String home = System.getenv("HOME");
+        if (home != null && !home.isBlank()) {
+            for (int i = 0; i < argList.size(); i++) {
+                String arg = argList.get(i);
+                if (arg != null && arg.startsWith("~")) {
+                    argList.set(i, home + arg.substring(1));
+                }
+            }
+        }
+
         String commandArgs = String.join(" ", argList);
 
         Command command = Command.build(commandName, commandArgs);

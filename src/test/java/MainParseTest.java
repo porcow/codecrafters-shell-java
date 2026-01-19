@@ -2,6 +2,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
 public class MainParseTest {
@@ -103,6 +104,16 @@ public class MainParseTest {
         Command command = Main.parse("echo \\'hello\\'");
 
         assertEquals(List.of("'hello'"), command.getArgList());
+    }
+
+    @Test
+    void parse_expandsTildeInArguments() {
+        String home = System.getenv("HOME");
+        Assumptions.assumeTrue(home != null && !home.isBlank());
+
+        Command command = Main.parse("echo ~/docs");
+
+        assertEquals(List.of(home + "/docs"), command.getArgList());
     }
 
     @Test
