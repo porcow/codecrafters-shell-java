@@ -18,11 +18,15 @@ public class ExternalCommand implements CCRunnable {
     @Override
     public void run(Command cmd) {
         List<String> commandLine = new ArrayList<>();
-        String exec = cmd.getPath();
-        if (exec == null || exec.isBlank()) {
-            exec = cmd.getName();
+        String execPath = cmd.getPath();
+        String execName = cmd.getName();
+
+        if (execName == null || execName.isBlank()) {
+            commandLine.add(execPath);
+        } else {
+            commandLine.add(execName);
         }
-        commandLine.add(exec);
+
         List<String> args = cmd.getArgList();
         if (args != null && !args.isEmpty()) {
             commandLine.addAll(args);
