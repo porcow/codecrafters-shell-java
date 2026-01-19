@@ -13,12 +13,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 public class AutocompleteTest {
-    private static String uniqueMatch(String token) throws Exception {
-        Method method = Main.class.getDeclaredMethod("uniqueBuiltinMatch", String.class);
-        method.setAccessible(true);
-        return (String) method.invoke(null, token);
-    }
-
     private static String uniqueCommandMatch(String token) throws Exception {
         Method method = Main.class.getDeclaredMethod("uniqueCommandMatch", String.class);
         method.setAccessible(true);
@@ -26,23 +20,23 @@ public class AutocompleteTest {
     }
 
     @Test
-    void uniqueBuiltinMatch_completesEcho() throws Exception {
-        assertEquals("echo", uniqueMatch("ech"));
+    void uniqueCommandMatch_completesEcho() throws Exception {
+        assertEquals("echo", runWithPath("", "ech"));
     }
 
     @Test
-    void uniqueBuiltinMatch_completesExit() throws Exception {
-        assertEquals("exit", uniqueMatch("exi"));
+    void uniqueCommandMatch_completesExit() throws Exception {
+        assertEquals("exit", runWithPath("", "exi"));
     }
 
     @Test
-    void uniqueBuiltinMatch_returnsNullWhenAmbiguous() throws Exception {
-        assertNull(uniqueMatch("e"));
+    void uniqueCommandMatch_returnsNullWhenAmbiguousBuiltin() throws Exception {
+        assertNull(runWithPath("", "e"));
     }
 
     @Test
-    void uniqueBuiltinMatch_returnsNullWhenNoMatch() throws Exception {
-        assertNull(uniqueMatch("nope"));
+    void uniqueCommandMatch_returnsNullWhenNoMatch() throws Exception {
+        assertNull(runWithPath("", "nope"));
     }
 
     @Test
@@ -55,7 +49,7 @@ public class AutocompleteTest {
             exec.toFile().setExecutable(true);
         }
 
-        String output = runWithTempPath(tempDir, "custom");
+        String output = runWithPath(tempDir.toString(), "custom");
 
         assertEquals("custom_executable", output);
     }
@@ -74,12 +68,12 @@ public class AutocompleteTest {
             second.toFile().setExecutable(true);
         }
 
-        String output = runWithTempPath(tempDir, "custom");
+        String output = runWithPath(tempDir.toString(), "custom");
 
         assertNull(output);
     }
 
-    private String runWithTempPath(Path tempDir, String token) throws Exception {
+    private String runWithPath(String pathValue, String token) throws Exception {
         String javaBin = Path.of(System.getProperty("java.home"), "bin", "java").toString();
         String classpath = System.getProperty("java.class.path");
 
@@ -88,14 +82,17 @@ public class AutocompleteTest {
         command.add("-cp");
         command.add(classpath);
         command.add(AutocompleteHarness.class.getName());
-        command.add(tempDir.toString());
+        command.add(pathValue);
         command.add(token);
         ProcessBuilder builder = new ProcessBuilder(command);
         Map<String, String> env = builder.environment();
-        String pathValue = tempDir.toString();
         String originalPath = env.get("PATH");
-        if (originalPath != null && !originalPath.isBlank()) {
-            pathValue = tempDir + java.io.File.pathSeparator + originalPath;
+        if (pathValue != null && !pathValue.isBlank()) {
+            if (originalPath != null && !originalPath.isBlank()) {
+                pathValue = pathValue + java.io.File.pathSeparator + originalPath;
+            }
+        } else {
+            pathValue = originalPath == null ? "" : originalPath;
         }
         env.put("PATH", pathValue);
         Process process = builder.start();

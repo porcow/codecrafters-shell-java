@@ -13,6 +13,7 @@ import org.jline.reader.Completer;
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
+import org.jline.reader.Reference;
 import org.jline.reader.UserInterruptException;
 import org.jline.reader.impl.DefaultParser;
 import org.jline.terminal.Terminal;
@@ -24,6 +25,7 @@ public class Main {
     private static final String PROMPT = "$ ";
     private static final String[] AUTOCOMPLETE_BUILTINS = {"echo", "exit"};
     private static final LineReader LINE_READER = buildLineReader();
+    private static String lastTabBuffer = null;
     final static Map<String, CCRunnable> builtinMap = new HashMap<String, CCRunnable>() {{
             put("echo", EchoCommand.getInstance());
             put("exit", ExitCommand.getInstance());
@@ -58,65 +60,54 @@ public class Main {
         return SCANNER.nextLine();
     }
 
-    private static String uniqueBuiltinMatch(String token) {
-        if (token == null || token.isEmpty()) {
-            return null;
+    private static String uniqueCommandMatch(String token) {
+        List<String> matches = findCommandMatches(token);
+        if (matches.size() == 1) {
+            return matches.get(0);
         }
-        String match = null;
-        for (String builtin : AUTOCOMPLETE_BUILTINS) {
-            if (builtin.startsWith(token)) {
-                if (match != null) {
-                    return null;
-                }
-                match = builtin;
-            }
-        }
-        return match;
+        return null;
     }
 
-    private static String uniqueCommandMatch(String token) {
+    private static List<String> findCommandMatches(String token) {
+        List<String> matches = new ArrayList<>();
         if (token == null || token.isEmpty()) {
-            return null;
+            return matches;
         }
-        String match = null;
+
+        java.util.Set<String> unique = new java.util.TreeSet<>();
         for (String builtin : AUTOCOMPLETE_BUILTINS) {
             if (builtin.startsWith(token)) {
-                if (match != null && !match.equals(builtin)) {
-                    return null;
-                }
-                match = builtin;
+                unique.add(builtin);
             }
         }
 
         String pathEnv = System.getenv("PATH");
-        if (pathEnv == null || pathEnv.isBlank()) {
-            return match;
-        }
-        String[] dirs = pathEnv.split(File.pathSeparator);
-        for (String dir : dirs) {
-            if (dir == null) {
-                continue;
-            }
-            String dirPath = dir.isEmpty() ? "." : dir;
-            if (dirPath.isBlank()) {
-                continue;
-            }
-            File directory = new File(dirPath);
-            File[] entries = directory.listFiles();
-            if (entries == null) {
-                continue;
-            }
-            for (File entry : entries) {
-                String name = entry.getName();
-                if (entry.isFile() && entry.canExecute() && name.startsWith(token)) {
-                    if (match != null && !match.equals(name)) {
-                        return null;
+        if (pathEnv != null && !pathEnv.isBlank()) {
+            String[] dirs = pathEnv.split(File.pathSeparator);
+            for (String dir : dirs) {
+                if (dir == null) {
+                    continue;
+                }
+                String dirPath = dir.isEmpty() ? "." : dir;
+                if (dirPath.isBlank()) {
+                    continue;
+                }
+                File directory = new File(dirPath);
+                File[] entries = directory.listFiles();
+                if (entries == null) {
+                    continue;
+                }
+                for (File entry : entries) {
+                    String name = entry.getName();
+                    if (entry.isFile() && entry.canExecute() && name.startsWith(token)) {
+                        unique.add(name);
                     }
-                    match = name;
                 }
             }
         }
-        return match;
+
+        matches.addAll(unique);
+        return matches;
     }
 
     private static LineReader buildLineReader() {
@@ -130,11 +121,14 @@ public class Main {
             DefaultParser parser = new DefaultParser();
             parser.setEscapeChars(new char[0]);
             Completer completer = new BuiltinCompleter();
-            return LineReaderBuilder.builder()
+            LineReader reader = LineReaderBuilder.builder()
                     .terminal(terminal)
                     .parser(parser)
                     .completer(completer)
                     .build();
+            reader.getWidgets().put("custom-tab", () -> handleTab(reader));
+            reader.getKeyMaps().get(LineReader.MAIN).bind(new Reference("custom-tab"), "\t");
+            return reader;
         } catch (Exception e) {
             return null;
         }
@@ -153,6 +147,70 @@ public class Main {
                 return;
             }
             candidates.add(new Candidate(match, match, null, null, " ", null, true));
+        }
+    }
+
+    private static boolean handleTab(LineReader reader) {
+        String prefix = currentCommandPrefix(reader);
+        if (prefix == null || prefix.isEmpty()) {
+            lastTabBuffer = null;
+            return true;
+        }
+
+        List<String> matches = findCommandMatches(prefix);
+        if (matches.isEmpty()) {
+            lastTabBuffer = null;
+            return true;
+        }
+
+        if (matches.size() == 1) {
+            String match = matches.get(0);
+            if (!match.equals(prefix)) {
+                reader.getBuffer().write(match.substring(prefix.length()) + " ");
+            } else {
+                reader.getBuffer().write(" ");
+            }
+            lastTabBuffer = null;
+            return true;
+        }
+
+        String buffer = reader.getBuffer().toString();
+        if (buffer.equals(lastTabBuffer)) {
+            reader.printAbove(String.join("  ", matches));
+        } else {
+            ringBell(reader);
+        }
+        lastTabBuffer = buffer;
+        return true;
+    }
+
+    private static String currentCommandPrefix(LineReader reader) {
+        String line = reader.getBuffer().toString();
+        int cursor = reader.getBuffer().cursor();
+        int start = 0;
+        while (start < line.length() && Character.isWhitespace(line.charAt(start))) {
+            start++;
+        }
+        if (cursor < start) {
+            return "";
+        }
+        int end = start;
+        while (end < line.length() && !Character.isWhitespace(line.charAt(end))) {
+            end++;
+        }
+        if (cursor > end) {
+            return null;
+        }
+        return line.substring(start, cursor);
+    }
+
+    private static void ringBell(LineReader reader) {
+        java.io.Writer writer = reader.getTerminal().writer();
+        try {
+            writer.write("\007");
+            writer.flush();
+        } catch (java.io.IOException e) {
+            // Ignore bell failures in non-interactive terminals.
         }
     }
 
