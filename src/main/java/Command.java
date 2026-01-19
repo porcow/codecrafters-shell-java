@@ -84,6 +84,23 @@ public class Command {
             return null;
         }
 
+        String found = findExecutableInPath(name, pathEnv);
+        if (found != null) {
+            return found;
+        }
+
+        String escaped = escapeUnescapedSingleQuotes(name);
+        if (!escaped.equals(name)) {
+            found = findExecutableInPath(escaped, pathEnv);
+            if (found != null) {
+                return found;
+            }
+        }
+
+        return null;
+    }
+
+    private static String findExecutableInPath(String name, String pathEnv) {
         String[] dirs = pathEnv.split(":");
         for (String dir : dirs) {
             String dirPath = dir.isEmpty() ? "." : dir;
@@ -92,8 +109,19 @@ public class Command {
                 return candidate.getAbsolutePath();
             }
         }
-
         return null;
+    }
+
+    private static String escapeUnescapedSingleQuotes(String name) {
+        StringBuilder escaped = new StringBuilder();
+        for (int i = 0; i < name.length(); i++) {
+            char ch = name.charAt(i);
+            if (ch == '\'' && (i == 0 || name.charAt(i - 1) != '\\')) {
+                escaped.append('\\');
+            }
+            escaped.append(ch);
+        }
+        return escaped.toString();
     }
 
     public boolean isRunable() {

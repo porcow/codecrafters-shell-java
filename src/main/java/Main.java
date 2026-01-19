@@ -107,17 +107,7 @@ public class Main {
     }
 
     public static Command parse(String inputString) {
-        List<String> tokens = tokenize(inputString);
-
-        String commandName = tokens.isEmpty() ? null : tokens.get(0);
-        List<String> argList = tokens.size() > 1
-                ? new ArrayList<>(tokens.subList(1, tokens.size()))
-                : new ArrayList<>();
-        String commandArgs = String.join(" ", argList);
-
-        Command command = Command.build(commandName, commandArgs);
-        command.setArgList(argList);
-        return command;
+        return parseTokens(tokenize(inputString));
     }
 
     public static List<String> parseArguments(String inputString) {
@@ -288,7 +278,7 @@ public class Main {
             return;
         }
 
-        Command rightCommand = parse(parsed.redirectPart);
+        Command rightCommand = parseTokens(redirectTokens);
         if ((parsed.redirectType == RedirectType.STDOUT
                 || parsed.redirectType == RedirectType.STDERR)
                 && isRunnableCommand(rightCommand)) {
@@ -332,6 +322,18 @@ public class Main {
         } catch (RuntimeException e) {
             reportRunError(parsed.command, e);
         }
+    }
+
+    private static Command parseTokens(List<String> tokens) {
+        String commandName = tokens.isEmpty() ? null : tokens.get(0);
+        List<String> argList = tokens.size() > 1
+                ? new ArrayList<>(tokens.subList(1, tokens.size()))
+                : new ArrayList<>();
+        String commandArgs = String.join(" ", argList);
+
+        Command command = Command.build(commandName, commandArgs);
+        command.setArgList(argList);
+        return command;
     }
 
     private static void runCommand(Command command) {
