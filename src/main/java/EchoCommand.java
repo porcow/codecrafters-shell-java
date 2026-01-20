@@ -1,3 +1,7 @@
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PrintStream;
+
 public class EchoCommand implements CCRunnable {
     private static EchoCommand instance;
 
@@ -13,11 +17,17 @@ public class EchoCommand implements CCRunnable {
 
     @Override
     public void run(Command cmd) {
+        runWithStreams(cmd, System.in, System.out, System.err);
+    }
+
+    @Override
+    public void runWithStreams(Command cmd, InputStream in, OutputStream out, OutputStream err) {
+        PrintStream stdout = CCRunnable.toPrintStream(out);
         if (cmd.getArgList() == null) {
-            System.out.println();
+            stdout.println();
             return;
         }
-        System.out.println(String.join(" ", cmd.getArgList()));
+        stdout.println(String.join(" ", cmd.getArgList()));
     }
 
 }

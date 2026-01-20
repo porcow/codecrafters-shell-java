@@ -1,3 +1,6 @@
+import java.io.InputStream;
+import java.io.OutputStream;
+
 public class ExitCommand implements CCRunnable {
     private static ExitCommand instance;
 
@@ -13,6 +16,11 @@ public class ExitCommand implements CCRunnable {
 
     @Override
     public void run(Command cmd) {
+        runWithStreams(cmd, System.in, System.out, System.err);
+    }
+
+    @Override
+    public void runWithStreams(Command cmd, InputStream in, OutputStream out, OutputStream err) {
         System.exit(0);
     }
 }

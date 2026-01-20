@@ -1,3 +1,6 @@
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.util.List;
 
 public class TypeCommand implements CCRunnable {
@@ -15,6 +18,12 @@ public class TypeCommand implements CCRunnable {
 
     @Override
     public void run(Command cmd) {
+        runWithStreams(cmd, System.in, System.out, System.err);
+    }
+
+    @Override
+    public void runWithStreams(Command cmd, InputStream in, OutputStream out, OutputStream err) {
+        PrintStream stdout = CCRunnable.toPrintStream(out);
         List<String> args = cmd.getArgList();
         if (args == null || args.isEmpty()) {
             return;
@@ -23,11 +32,11 @@ public class TypeCommand implements CCRunnable {
         for (String arg : args) {
             Command typeCommand = Command.build(arg, "");
             if (typeCommand.isBuiltin()) {
-                System.out.println(arg + " is a shell builtin");
+                stdout.println(arg + " is a shell builtin");
             } else if (typeCommand.isRunable() && typeCommand.getPath() != null) {
-                System.out.println(arg + " is " + typeCommand.getPath());
+                stdout.println(arg + " is " + typeCommand.getPath());
             } else {
-                System.out.println(arg + ": not found");
+                stdout.println(arg + ": not found");
             }
         }
     }

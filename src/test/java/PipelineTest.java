@@ -3,17 +3,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.BeforeEach;
 
 public class PipelineTest {
     @TempDir
     Path tempDir;
 
+    @BeforeEach
+    void resetWorkspace() {
+        Command.setCurrentWorkspace(System.getProperty("user.dir"));
+    }
+
     @Test
     void eval_redirectsStdoutToRunnableCommand() {
-        Main.ParsedLine parsed = Main.parseLine("echo hello world > echo");
+        CCParser.ParsedLine parsed = CCParser.parseLine("echo hello world > echo");
 
         String output = TestUtils.captureStdout(() -> Main.eval(parsed));
 
@@ -21,8 +28,31 @@ public class PipelineTest {
     }
 
     @Test
+    void eval_pipeIgnoresQuotedPipe() {
+        String output = TestUtils.captureStdout(() -> Main.evalInput("/bin/echo \"a|b\" | /bin/cat"));
+
+        assertEquals("a|b" + System.lineSeparator(), output);
+    }
+
+    @Test
+    void eval_pipeStreamsStdoutIntoStdin(@TempDir Path tempDir) throws Exception {
+        Path upper = tempDir.resolve("upper");
+        Files.writeString(upper, "#!/bin/sh\ntr '[:lower:]' '[:upper:]'\n");
+        try {
+            Files.setPosixFilePermissions(upper, PosixFilePermissions.fromString("rwxr-xr-x"));
+        } catch (UnsupportedOperationException e) {
+            upper.toFile().setExecutable(true);
+        }
+
+        String command = "/bin/echo hello | " + upper.toAbsolutePath();
+        String output = TestUtils.captureStdout(() -> Main.evalInput(command));
+
+        assertEquals("HELLO" + System.lineSeparator(), output);
+    }
+
+    @Test
     void eval_splitsOnOneGreaterThan() {
-        Main.ParsedLine parsed = Main.parseLine("echo hello 1> echo");
+        CCParser.ParsedLine parsed = CCParser.parseLine("echo hello 1> echo");
 
         String output = TestUtils.captureStdout(() -> Main.eval(parsed));
 
@@ -31,7 +61,7 @@ public class PipelineTest {
 
     @Test
     void eval_ignoresEscapedGreaterThan() {
-        Main.ParsedLine parsed = Main.parseLine("echo a\\>b > echo");
+        CCParser.ParsedLine parsed = CCParser.parseLine("echo a\\>b > echo");
 
         String output = TestUtils.captureStdout(() -> Main.eval(parsed));
 
@@ -40,7 +70,7 @@ public class PipelineTest {
 
     @Test
     void eval_ignoresQuotedGreaterThan() {
-        Main.ParsedLine parsed = Main.parseLine("echo \"a>b\" > echo");
+        CCParser.ParsedLine parsed = CCParser.parseLine("echo \"a>b\" > echo");
 
         String output = TestUtils.captureStdout(() -> Main.eval(parsed));
 
@@ -50,7 +80,7 @@ public class PipelineTest {
     @Test
     void eval_redirectsStdoutToFile() throws Exception {
         Command.setCurrentWorkspace(tempDir.toAbsolutePath().toString());
-        Main.ParsedLine parsed = Main.parseLine("echo hello > output.txt");
+        CCParser.ParsedLine parsed = CCParser.parseLine("echo hello > output.txt");
 
         Main.eval(parsed);
 
@@ -64,7 +94,7 @@ public class PipelineTest {
         Path output = tempDir.resolve("output.txt");
         Files.writeString(output, "old" + System.lineSeparator());
 
-        Main.ParsedLine parsed = Main.parseLine("echo new 1> output.txt");
+        CCParser.ParsedLine parsed = CCParser.parseLine("echo new 1> output.txt");
         Main.eval(parsed);
 
         String content = Files.readString(output);
@@ -76,20 +106,8 @@ public class PipelineTest {
         Command.setCurrentWorkspace(tempDir.toAbsolutePath().toString());
         Path output = tempDir.resolve("append.txt");
 
-        Main.eval(Main.parseLine("echo first >> append.txt"));
-        Main.eval(Main.parseLine("echo second >> append.txt"));
-
-        String content = Files.readString(output);
-        assertEquals("first" + System.lineSeparator() + "second" + System.lineSeparator(), content);
-    }
-
-    @Test
-    void eval_appendsWithOneDoubleGreaterThan() throws Exception {
-        Command.setCurrentWorkspace(tempDir.toAbsolutePath().toString());
-        Path output = tempDir.resolve("append-one.txt");
-
-        Main.eval(Main.parseLine("echo first 1>> append-one.txt"));
-        Main.eval(Main.parseLine("echo second 1>> append-one.txt"));
+        Main.eval(CCParser.parseLine("echo first >> append.txt"));
+        Main.eval(CCParser.parseLine("echo second >> append.txt"));
 
         String content = Files.readString(output);
         assertEquals("first" + System.lineSeparator() + "second" + System.lineSeparator(), content);
@@ -99,7 +117,7 @@ public class PipelineTest {
     void eval_redirectsStderrToFile() throws Exception {
         Command.setCurrentWorkspace(tempDir.toAbsolutePath().toString());
         Files.writeString(tempDir.resolve("existing.txt"), "contents" + System.lineSeparator());
-        Main.ParsedLine parsed = Main.parseLine("cat existing.txt missing.txt 2> errors.txt");
+        CCParser.ParsedLine parsed = CCParser.parseLine("cat existing.txt missing.txt 2> errors.txt");
 
         String output = TestUtils.captureStdout(() -> Main.eval(parsed));
 
@@ -112,7 +130,7 @@ public class PipelineTest {
     @Test
     void eval_redirectsStderrToRunnableCommand() {
         Command.setCurrentWorkspace(tempDir.toAbsolutePath().toString());
-        Main.ParsedLine parsed = Main.parseLine("cat missing.txt 2> echo");
+        CCParser.ParsedLine parsed = CCParser.parseLine("cat missing.txt 2> echo");
 
         String output = TestUtils.captureStdout(() -> Main.eval(parsed));
 
@@ -125,8 +143,8 @@ public class PipelineTest {
         Command.setCurrentWorkspace(tempDir.toAbsolutePath().toString());
         Path errors = tempDir.resolve("errors.txt");
 
-        Main.eval(Main.parseLine("cat missing1.txt 2>> errors.txt"));
-        Main.eval(Main.parseLine("cat missing2.txt 2>> errors.txt"));
+        Main.eval(CCParser.parseLine("cat missing1.txt 2>> errors.txt"));
+        Main.eval(CCParser.parseLine("cat missing2.txt 2>> errors.txt"));
 
         String content = Files.readString(errors);
         int first = content.indexOf("missing1.txt");

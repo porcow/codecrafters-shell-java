@@ -156,7 +156,7 @@ public class ExternalCommandTest {
     public static class EvalHarness {
         public static void main(String[] args) {
             String line = String.join(" ", args);
-            Main.eval(Main.parseLine(line));
+            Main.eval(CCParser.parseLine(line));
         }
     }
 }

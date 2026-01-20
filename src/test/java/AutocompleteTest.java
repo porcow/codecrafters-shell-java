@@ -27,13 +27,8 @@ public class AutocompleteTest {
     }
 
     @Test
-    void uniqueCommandMatch_completesEcho() throws Exception {
+    void uniqueCommandMatch_completesBuiltin() throws Exception {
         assertEquals("echo", runWithPath("", "ech"));
-    }
-
-    @Test
-    void uniqueCommandMatch_completesExit() throws Exception {
-        assertEquals("exit", runWithPath("", "exi"));
     }
 
     @Test

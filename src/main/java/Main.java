@@ -4,6 +4,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.io.File;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -38,8 +42,7 @@ public class Main {
 
         while (true) {
             String input = read();
-            ParsedLine parsed = parseLine(input);
-            eval(parsed);
+            evalInput(input);
         }
     }
 
@@ -266,245 +269,146 @@ public class Main {
         return prefix;
     }
 
-    public static Command parse(String inputString) {
-        return parseTokens(tokenize(inputString));
-    }
-
-    public static List<String> parseArguments(String inputString) {
-        return tokenize(inputString);
-    }
-
-    public static ParsedLine parseLine(String inputString) {
-        SplitResult split = splitRedirection(inputString);
-        Command command = parse(split.left);
-        return new ParsedLine(command, split.right, split.type);
-    }
-
-    private static SplitResult splitRedirection(String inputString) {
-        boolean inSingleQuotes = false;
-        boolean inDoubleQuotes = false;
-
-        for (int i = 0; i < inputString.length(); i++) {
-            char ch = inputString.charAt(i);
-
-            // Only split on >, 1>, 2>, >>, 1>>, or 2>> when we're not inside quotes or escapes.
-            if (!inSingleQuotes && !inDoubleQuotes && ch == '\\') {
-                if (i + 1 < inputString.length()) {
-                    i++;
-                }
-                continue;
-            }
-
-            if (inDoubleQuotes && ch == '\\') {
-                if (i + 1 < inputString.length()) {
-                    char next = inputString.charAt(i + 1);
-                    if (next == '"' || next == '\\') {
-                        i++;
-                    }
-                }
-                continue;
-            }
-
-            if (ch == '\'' && !inDoubleQuotes) {
-                inSingleQuotes = !inSingleQuotes;
-                continue;
-            }
-
-            if (ch == '"' && !inSingleQuotes) {
-                inDoubleQuotes = !inDoubleQuotes;
-                continue;
-            }
-
-            if (!inSingleQuotes && !inDoubleQuotes) {
-                if (ch == '2' && i + 1 < inputString.length() && inputString.charAt(i + 1) == '>') {
-                    if (i + 2 < inputString.length() && inputString.charAt(i + 2) == '>') {
-                        return new SplitResult(inputString.substring(0, i),
-                                               inputString.substring(i + 3),
-                                               RedirectType.STDERR_APPEND);
-                    }
-                    return new SplitResult(inputString.substring(0, i),
-                                           inputString.substring(i + 2),
-                                           RedirectType.STDERR);
-                }
-                if (ch == '1' && i + 1 < inputString.length() && inputString.charAt(i + 1) == '>') {
-                    if (i + 2 < inputString.length() && inputString.charAt(i + 2) == '>') {
-                        return new SplitResult(inputString.substring(0, i),
-                                               inputString.substring(i + 3),
-                                               RedirectType.STDOUT_APPEND);
-                    }
-                    return new SplitResult(inputString.substring(0, i),
-                                           inputString.substring(i + 2),
-                                           RedirectType.STDOUT);
-                }
-                if (ch == '>') {
-                    if (i + 1 < inputString.length() && inputString.charAt(i + 1) == '>') {
-                        return new SplitResult(inputString.substring(0, i),
-                                               inputString.substring(i + 2),
-                                               RedirectType.STDOUT_APPEND);
-                    }
-                    return new SplitResult(inputString.substring(0, i),
-                                           inputString.substring(i + 1),
-                                           RedirectType.STDOUT);
-                }
-            }
+    public static void evalInput(String inputString) {
+        List<String> pipelineParts = CCParser.splitPipeline(inputString);
+        if (pipelineParts.size() > 1) {
+            evalPipeline(pipelineParts);
+            return;
         }
-
-        return new SplitResult(inputString, null, null);
+        CCParser.ParsedLine parsed = CCParser.parseLine(inputString);
+        eval(parsed);
     }
-
-    private static List<String> tokenize(String inputString) {
-        List<String> tokens = new ArrayList<>();
-        StringBuilder current = new StringBuilder();
-        boolean inSingleQuotes = false;
-        boolean inDoubleQuotes = false;
-        boolean tokenStarted = false;
-
-        for (int i = 0; i < inputString.length(); i++) {
-            char ch = inputString.charAt(i);
-
-            // Outside quotes, backslash escapes the next character (including whitespace and quotes).
-            if (!inSingleQuotes && !inDoubleQuotes && ch == '\\') {
-                if (i + 1 < inputString.length()) {
-                    current.append(inputString.charAt(i + 1));
-                    tokenStarted = true;
-                    i++;
-                } else {
-                    current.append(ch);
-                    tokenStarted = true;
-                }
-                continue;
-            }
-
-            if (inDoubleQuotes && ch == '\\') {
-                if (i + 1 < inputString.length()) {
-                    char next = inputString.charAt(i + 1);
-                    if (next == '"' || next == '\\') {
-                        current.append(next);
-                        tokenStarted = true;
-                        i++;
-                        continue;
-                    }
-                }
-                current.append(ch);
-                tokenStarted = true;
-                continue;
-            }
-
-            if (ch == '\'' && !inDoubleQuotes) {
-                inSingleQuotes = !inSingleQuotes;
-                tokenStarted = true;
-                continue;
-            }
-
-            if (ch == '"' && !inSingleQuotes) {
-                inDoubleQuotes = !inDoubleQuotes;
-                tokenStarted = true;
-                continue;
-            }
-
-            if (!inSingleQuotes && !inDoubleQuotes && Character.isWhitespace(ch)) {
-                if (tokenStarted) {
-                    tokens.add(current.toString());
-                    current.setLength(0);
-                    tokenStarted = false;
-                }
-                continue;
-            }
-
-            current.append(ch);
-            tokenStarted = true;
-        }
-
-        if (tokenStarted) {
-            tokens.add(current.toString());
-        }
-
-        return tokens;
-    }
-
-    public static void eval(ParsedLine parsed) {
-        if (parsed == null || parsed.command == null) {
+    public static void eval(CCParser.ParsedLine parsed) {
+        if (parsed == null || parsed.command() == null) {
             return;
         }
 
-        if (parsed.redirectPart == null || parsed.redirectPart.isBlank()) {
-            runCommand(parsed.command);
+        if (parsed.redirectPart() == null || parsed.redirectPart().isBlank()) {
+            runCommand(parsed.command());
             return;
         }
 
-        List<String> redirectTokens = tokenize(parsed.redirectPart);
+        List<String> redirectTokens = CCParser.parseArguments(parsed.redirectPart());
         if (redirectTokens.isEmpty()) {
-            runCommand(parsed.command);
+            runCommand(parsed.command());
             return;
         }
 
-        Command rightCommand = parseTokens(redirectTokens);
-        if ((parsed.redirectType == RedirectType.STDOUT
-                || parsed.redirectType == RedirectType.STDERR)
+        Command rightCommand = CCParser.parseTokens(redirectTokens);
+        if ((parsed.redirectType() == CCParser.RedirectType.STDOUT
+                || parsed.redirectType() == CCParser.RedirectType.STDERR)
                 && isRunnableCommand(rightCommand)) {
-            CCRunnable runner = resolveRunner(parsed.command);
+            CCRunnable runner = resolveRunner(parsed.command());
             if (runner == null) {
-                System.out.println(parsed.command.getName() + ": command not found");
+                System.out.println(parsed.command().getName() + ": command not found");
                 return;
             }
             try {
-                if (parsed.redirectType == RedirectType.STDERR) {
-                    runner.stderr(parsed.command, rightCommand);
+                if (parsed.redirectType() == CCParser.RedirectType.STDERR) {
+                    runner.stderr(parsed.command(), rightCommand);
                 } else {
-                    runner.stdout(parsed.command, rightCommand);
+                    runner.stdout(parsed.command(), rightCommand);
                 }
             } catch (RuntimeException e) {
-                reportRunError(parsed.command, e);
+                reportRunError(parsed.command(), e);
                 return;
             }
             runCommand(rightCommand);
             return;
         }
 
-        CCRunnable runner = resolveRunner(parsed.command);
+        CCRunnable runner = resolveRunner(parsed.command());
         if (runner == null) {
-            System.out.println(parsed.command.getName() + ": command not found");
+            System.out.println(parsed.command().getName() + ": command not found");
             return;
         }
         Command sink = new Command();
         try {
-            if (parsed.redirectType == RedirectType.STDERR
-                    || parsed.redirectType == RedirectType.STDERR_APPEND) {
-                runner.stderr(parsed.command, sink);
+            if (parsed.redirectType() == CCParser.RedirectType.STDERR
+                    || parsed.redirectType() == CCParser.RedirectType.STDERR_APPEND) {
+                runner.stderr(parsed.command(), sink);
             } else {
-                runner.stdout(parsed.command, sink);
+                runner.stdout(parsed.command(), sink);
             }
-            writeRedirectOutput(parsed.command,
+            writeRedirectOutput(parsed.command(),
                     redirectTokens.get(0),
                     sink.getArgString(),
-                    parsed.redirectType == RedirectType.STDOUT_APPEND
-                            || parsed.redirectType == RedirectType.STDERR_APPEND);
+                    parsed.redirectType() == CCParser.RedirectType.STDOUT_APPEND
+                            || parsed.redirectType() == CCParser.RedirectType.STDERR_APPEND);
         } catch (RuntimeException e) {
-            reportRunError(parsed.command, e);
+            reportRunError(parsed.command(), e);
         }
     }
 
-    private static Command parseTokens(List<String> tokens) {
-        String commandName = tokens.isEmpty() ? null : tokens.get(0);
-        List<String> argList = tokens.size() > 1
-                ? new ArrayList<>(tokens.subList(1, tokens.size()))
-                : new ArrayList<>();
-
-        String home = System.getenv("HOME");
-        if (home != null && !home.isBlank()) {
-            for (int i = 0; i < argList.size(); i++) {
-                String arg = argList.get(i);
-                if (arg != null && arg.startsWith("~")) {
-                    argList.set(i, home + arg.substring(1));
-                }
-            }
+    private static void evalPipeline(List<String> parts) {
+        if (parts == null || parts.isEmpty()) {
+            return;
         }
 
-        String commandArgs = String.join(" ", argList);
+        List<Command> commands = new ArrayList<>();
+        List<CCRunnable> runners = new ArrayList<>();
+        for (String part : parts) {
+            if (part == null || part.isBlank()) {
+                return;
+            }
+            Command command = CCParser.parseTokens(CCParser.parseArguments(part));
+            CCRunnable runner = resolveRunner(command);
+            if (runner == null) {
+                System.out.println(command.getName() + ": command not found");
+                return;
+            }
+            commands.add(command);
+            runners.add(runner);
+        }
 
-        Command command = Command.build(commandName, commandArgs);
-        command.setArgList(argList);
-        return command;
+        List<Thread> threads = new ArrayList<>();
+        InputStream nextInput = System.in;
+        for (int i = 0; i < commands.size(); i++) {
+            Command command = commands.get(i);
+            CCRunnable runner = runners.get(i);
+            InputStream input = nextInput;
+            OutputStream output = System.out;
+            if (i < commands.size() - 1) {
+                try {
+                    PipedOutputStream pipeOut = new PipedOutputStream();
+                    PipedInputStream pipeIn = new PipedInputStream(pipeOut);
+                    output = pipeOut;
+                    nextInput = pipeIn;
+                } catch (Exception e) {
+                    reportRunError(command, new RuntimeException(e.getMessage(), e));
+                    return;
+                }
+            }
+
+            OutputStream targetOut = output;
+            InputStream targetIn = input;
+            Thread thread = new Thread(() -> {
+                try {
+                    runner.runWithStreams(command, targetIn, targetOut, System.err);
+                } catch (RuntimeException e) {
+                    reportRunError(command, e);
+                } finally {
+                    if (targetOut != System.out) {
+                        try {
+                            targetOut.close();
+                        } catch (Exception e) {
+                            // Ignore close failures.
+                        }
+                    }
+                }
+            });
+            threads.add(thread);
+            thread.start();
+        }
+
+        for (Thread thread : threads) {
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
     }
 
     private static void runCommand(Command command) {
@@ -573,14 +477,4 @@ public class Main {
         }
     }
 
-    public record ParsedLine(Command command, String redirectPart, RedirectType redirectType) {}
-
-    private record SplitResult(String left, String right, RedirectType type) {}
-
-    private enum RedirectType {
-        STDOUT,
-        STDERR,
-        STDOUT_APPEND,
-        STDERR_APPEND
-    }
 }

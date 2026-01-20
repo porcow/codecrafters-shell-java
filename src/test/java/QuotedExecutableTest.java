@@ -29,7 +29,7 @@ public class QuotedExecutableTest {
         Files.writeString(input, content);
 
         String commandLine = "'" + exec + "' " + input;
-        String output = TestUtils.captureStdout(() -> Main.eval(Main.parseLine(commandLine)));
+        String output = TestUtils.captureStdout(() -> Main.eval(CCParser.parseLine(commandLine)));
 
         assertEquals(content, output);
     }
@@ -44,7 +44,7 @@ public class QuotedExecutableTest {
         Files.writeString(input, content);
 
         String commandLine = "\"" + exec + "\" " + input;
-        String output = TestUtils.captureStdout(() -> Main.eval(Main.parseLine(commandLine)));
+        String output = TestUtils.captureStdout(() -> Main.eval(CCParser.parseLine(commandLine)));
 
         assertEquals(content, output);
     }

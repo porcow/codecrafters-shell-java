@@ -1,3 +1,6 @@
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -17,6 +20,12 @@ public class CdCommand implements CCRunnable {
 
     @Override
     public void run(Command cmd) {
+        runWithStreams(cmd, System.in, System.out, System.err);
+    }
+
+    @Override
+    public void runWithStreams(Command cmd, InputStream in, OutputStream out, OutputStream err) {
+        PrintStream stdout = CCRunnable.toPrintStream(out);
         List<String> args = cmd.getArgList();
         String target = "";
         String home = System.getenv("HOME");
@@ -33,7 +42,7 @@ public class CdCommand implements CCRunnable {
         }
 
         if (target == null || target.isBlank()) {
-            System.out.println("cd: : No such file or directory");
+            stdout.println("cd: : No such file or directory");
             return;
         }
 
@@ -52,7 +61,7 @@ public class CdCommand implements CCRunnable {
         if (Files.isDirectory(dirPath)) {
             Command.setCurrentWorkspace(dirPath.toAbsolutePath().toString());
         } else {
-            System.out.println("cd: " + target + ": No such file or directory");
+            stdout.println("cd: " + target + ": No such file or directory");
         }
     }
 }
