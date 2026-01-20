@@ -40,7 +40,7 @@ public class Main {
         }};
 
     public static void main(String[] args) throws Exception {
-        HistoryCommand.initializeFromEnv();
+        //HistoryCommand.initializeFromEnv();
 
         while (true) {
             String input = read();
