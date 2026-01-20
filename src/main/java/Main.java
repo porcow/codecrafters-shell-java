@@ -159,6 +159,7 @@ public class Main {
 
         List<String> matches = findCommandMatches(prefix);
         if (matches.isEmpty()) {
+            ringBell(reader);
             lastTabBuffer = null;
             return true;
         }

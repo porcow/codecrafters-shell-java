@@ -47,6 +47,13 @@ public class AutocompleteTest {
     }
 
     @Test
+    void noMatchRingsBell() throws Exception {
+        String output = runWithPathNoMatch("", "zzzz");
+        assertEquals(true, output.contains("\u0007"));
+        assertEquals(true, output.contains("BUFFER=zzzz"));
+    }
+
+    @Test
     void uniqueCommandMatch_findsExecutableInPath(@TempDir Path tempDir) throws Exception {
         Path exec = tempDir.resolve("custom_executable");
         Files.writeString(exec, "#!/bin/sh\necho ok\n");
@@ -155,6 +162,28 @@ public class AutocompleteTest {
         return output;
     }
 
+    private String runWithPathNoMatch(String pathValue, String token) throws Exception {
+        String javaBin = Path.of(System.getProperty("java.home"), "bin", "java").toString();
+        String classpath = System.getProperty("java.class.path");
+
+        List<String> command = new ArrayList<>();
+        command.add(javaBin);
+        command.add("-cp");
+        command.add(classpath);
+        command.add(NoMatchTabHarness.class.getName());
+        command.add(pathValue);
+        command.add(token);
+
+        ProcessBuilder builder = new ProcessBuilder(command);
+        Map<String, String> env = builder.environment();
+        String pathEnv = pathValue == null ? env.getOrDefault("PATH", "") : pathValue;
+        env.put("PATH", pathEnv);
+        Process process = builder.start();
+        String output = new String(process.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        process.waitFor();
+        return output;
+    }
+
     public static class AutocompleteHarness {
         public static void main(String[] args) throws Exception {
             String token = args.length > 1 ? args[1] : "";
@@ -164,6 +193,35 @@ public class AutocompleteTest {
             if (result != null) {
                 System.out.print(result.toString());
             }
+        }
+    }
+
+    public static class NoMatchTabHarness {
+        public static void main(String[] args) throws Exception {
+            String token = args.length > 1 ? args[1] : "";
+            java.lang.reflect.Field lastTab = Main.class.getDeclaredField("lastTabBuffer");
+            lastTab.setAccessible(true);
+            lastTab.set(null, null);
+
+            Terminal terminal = TerminalBuilder.builder()
+                    .system(false)
+                    .dumb(true)
+                    .type("dumb")
+                    .build();
+            DefaultParser parser = new DefaultParser();
+            parser.setEscapeChars(new char[0]);
+            LineReader reader = LineReaderBuilder.builder()
+                    .terminal(terminal)
+                    .parser(parser)
+                    .build();
+            reader.getBuffer().write(token);
+            reader.getBuffer().cursor(reader.getBuffer().length());
+
+            Method handleTab = Main.class.getDeclaredMethod("handleTab", LineReader.class);
+            handleTab.setAccessible(true);
+            handleTab.invoke(null, reader);
+
+            System.out.print("BUFFER=" + reader.getBuffer().toString());
         }
     }
 
