@@ -84,4 +84,27 @@ public class HistoryCommandTest {
                 "");
         assertEquals(expected, content);
     }
+
+    @Test
+    void history_appendsOnlyNewCommands(@TempDir Path tempDir) throws Exception {
+        HistoryCommand.clearHistory();
+        Path historyFile = tempDir.resolve("history.log");
+
+        TestUtils.captureStdout(() -> Main.evalInput("echo initial_command_1"));
+        TestUtils.captureStdout(() -> Main.evalInput("echo initial_command_2"));
+        TestUtils.captureStdout(() -> Main.evalInput("history -w " + historyFile));
+
+        TestUtils.captureStdout(() -> Main.evalInput("echo new_command"));
+        TestUtils.captureStdout(() -> Main.evalInput("history -a " + historyFile));
+
+        String content = Files.readString(historyFile);
+        String expected = String.join(System.lineSeparator(),
+                "echo initial_command_1",
+                "echo initial_command_2",
+                "history -w " + historyFile,
+                "echo new_command",
+                "history -a " + historyFile,
+                "");
+        assertEquals(expected, content);
+    }
 }

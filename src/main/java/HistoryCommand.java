@@ -10,6 +10,7 @@ import java.util.List;
 public class HistoryCommand implements CCRunnable {
     private static final List<String> HISTORY = new ArrayList<>();
     private static String historyFilePath;
+    private static int lastAppendIndex = 0;
     private static HistoryCommand instance;
 
     private HistoryCommand() {
@@ -37,11 +38,13 @@ public class HistoryCommand implements CCRunnable {
         historyFilePath = histFile;
         record("history -r " + histFile);
         readFromFile(histFile);
+        lastAppendIndex = HISTORY.size();
     }
 
     static void clearHistory() {
         HISTORY.clear();
         historyFilePath = null;
+        lastAppendIndex = 0;
     }
 
     static void writeOnExit() {
@@ -67,6 +70,7 @@ public class HistoryCommand implements CCRunnable {
                     String path = args.get(1);
                     historyFilePath = path;
                     writeToFile(path);
+                    lastAppendIndex = HISTORY.size();
                 }
                 return;
             }
@@ -75,6 +79,14 @@ public class HistoryCommand implements CCRunnable {
                     String path = args.get(1);
                     historyFilePath = path;
                     readFromFile(path);
+                }
+                return;
+            }
+            if ("-a".equals(option)) {
+                if (args.size() >= 2) {
+                    String path = args.get(1);
+                    historyFilePath = path;
+                    appendToFile(path);
                 }
                 return;
             }
@@ -118,6 +130,30 @@ public class HistoryCommand implements CCRunnable {
             }
         } catch (Exception e) {
             // Ignore history file read failures.
+        }
+    }
+
+    private static void appendToFile(String path) {
+        if (path == null || path.isBlank()) {
+            return;
+        }
+        int start = Math.min(Math.max(lastAppendIndex, 0), HISTORY.size());
+        if (start >= HISTORY.size()) {
+            return;
+        }
+        StringBuilder builder = new StringBuilder();
+        for (int i = start; i < HISTORY.size(); i++) {
+            builder.append(HISTORY.get(i)).append(System.lineSeparator());
+        }
+        try {
+            Path file = Path.of(path);
+            Files.writeString(file,
+                    builder.toString(),
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.APPEND);
+            lastAppendIndex = HISTORY.size();
+        } catch (Exception e) {
+            // Ignore history file append failures.
         }
     }
 
