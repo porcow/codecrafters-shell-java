@@ -1,11 +1,15 @@
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 
 public class HistoryCommand implements CCRunnable {
     private static final List<String> HISTORY = new ArrayList<>();
+    private static String historyFilePath;
     private static HistoryCommand instance;
 
     private HistoryCommand() {
@@ -25,8 +29,26 @@ public class HistoryCommand implements CCRunnable {
         HISTORY.add(line);
     }
 
+    public static void initializeFromEnv() {
+        String histFile = System.getenv("HISTFILE");
+        if (histFile == null || histFile.isBlank()) {
+            return;
+        }
+        historyFilePath = histFile;
+        record("history -r " + histFile);
+        readFromFile(histFile);
+    }
+
     static void clearHistory() {
         HISTORY.clear();
+        historyFilePath = null;
+    }
+
+    static void writeOnExit() {
+        if (historyFilePath == null || historyFilePath.isBlank()) {
+            return;
+        }
+        writeToFile(historyFilePath);
     }
 
     @Override
@@ -38,6 +60,26 @@ public class HistoryCommand implements CCRunnable {
     public void runWithStreams(Command cmd, InputStream in, OutputStream out, OutputStream err) {
         PrintStream stdout = CCRunnable.toPrintStream(out);
         List<String> args = cmd.getArgList();
+        if (args != null && !args.isEmpty()) {
+            String option = args.get(0);
+            if ("-w".equals(option)) {
+                if (args.size() >= 2) {
+                    String path = args.get(1);
+                    historyFilePath = path;
+                    writeToFile(path);
+                }
+                return;
+            }
+            if ("-r".equals(option)) {
+                if (args.size() >= 2) {
+                    String path = args.get(1);
+                    historyFilePath = path;
+                    readFromFile(path);
+                }
+                return;
+            }
+        }
+
         int limit = HISTORY.size();
         if (args != null && !args.isEmpty()) {
             try {
@@ -56,6 +98,45 @@ public class HistoryCommand implements CCRunnable {
         for (int i = start; i < HISTORY.size(); i++) {
             String entry = HISTORY.get(i);
             stdout.printf("%5d  %s%n", i + 1, entry);
+        }
+    }
+
+    private static void readFromFile(String path) {
+        if (path == null || path.isBlank()) {
+            return;
+        }
+        try {
+            Path file = Path.of(path);
+            if (!Files.exists(file)) {
+                return;
+            }
+            List<String> lines = Files.readAllLines(file);
+            for (String line : lines) {
+                if (line != null && !line.isBlank()) {
+                    HISTORY.add(line);
+                }
+            }
+        } catch (Exception e) {
+            // Ignore history file read failures.
+        }
+    }
+
+    private static void writeToFile(String path) {
+        if (path == null || path.isBlank()) {
+            return;
+        }
+        StringBuilder builder = new StringBuilder();
+        for (String entry : HISTORY) {
+            builder.append(entry).append(System.lineSeparator());
+        }
+        try {
+            Path file = Path.of(path);
+            Files.writeString(file,
+                    builder.toString(),
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING);
+        } catch (Exception e) {
+            // Ignore history file write failures.
         }
     }
 }

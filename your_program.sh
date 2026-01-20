@@ -21,4 +21,6 @@ set -e # Exit early if any commands fail
 #
 # - Edit this to change how your program runs locally
 # - Edit .codecrafters/run.sh to change how your program runs remotely
+script_dir="$(cd "$(dirname "$0")" && pwd)"
+export HISTFILE="$script_dir/history.log"
 exec java --enable-preview --enable-native-access=ALL-UNNAMED -jar /tmp/codecrafters-build-shell-java/codecrafters-shell.jar "$@"

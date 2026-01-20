@@ -21,6 +21,7 @@ public class ExitCommand implements CCRunnable {
 
     @Override
     public void runWithStreams(Command cmd, InputStream in, OutputStream out, OutputStream err) {
+        HistoryCommand.writeOnExit();
         System.exit(0);
     }
 }

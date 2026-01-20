@@ -1,6 +1,10 @@
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 public class HistoryCommandTest {
 
@@ -37,5 +41,47 @@ public class HistoryCommandTest {
                 "    3  history 2",
                 "");
         assertEquals(expected, output);
+    }
+
+    @Test
+    void history_readsFromFile(@TempDir Path tempDir) throws Exception {
+        HistoryCommand.clearHistory();
+        Path historyFile = tempDir.resolve("history.log");
+        String fileContent = String.join(System.lineSeparator(),
+                "echo hello",
+                "echo world",
+                "");
+        Files.writeString(historyFile, fileContent);
+
+        String output = TestUtils.captureStdout(() -> {
+            Main.evalInput("history -r " + historyFile);
+            Main.evalInput("history");
+        });
+
+        String expected = String.join(System.lineSeparator(),
+                "    1  history -r " + historyFile,
+                "    2  echo hello",
+                "    3  echo world",
+                "    4  history",
+                "");
+        assertEquals(expected, output);
+    }
+
+    @Test
+    void history_writesToFile(@TempDir Path tempDir) throws Exception {
+        HistoryCommand.clearHistory();
+        Path historyFile = tempDir.resolve("history.log");
+
+        TestUtils.captureStdout(() -> Main.evalInput("echo hello"));
+        TestUtils.captureStdout(() -> Main.evalInput("echo world"));
+        TestUtils.captureStdout(() -> Main.evalInput("history -w " + historyFile));
+
+        String content = Files.readString(historyFile);
+        String expected = String.join(System.lineSeparator(),
+                "echo hello",
+                "echo world",
+                "history -w " + historyFile,
+                "");
+        assertEquals(expected, content);
     }
 }

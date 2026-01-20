@@ -40,6 +40,7 @@ public class Main {
         }};
 
     public static void main(String[] args) throws Exception {
+        HistoryCommand.initializeFromEnv();
 
         while (true) {
             String input = read();
@@ -55,6 +56,7 @@ public class Main {
                 return "";
             } catch (EndOfFileException e) {
                 System.out.println();
+                HistoryCommand.writeOnExit();
                 System.exit(0);
             }
         }
