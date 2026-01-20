@@ -2,7 +2,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,47 +17,7 @@ public class ExternalCommand implements CCRunnable {
 
     @Override
     public void run(Command cmd) {
-        List<String> commandLine = new ArrayList<>();
-        String execPath = cmd.getPath();
-        String execName = cmd.getName();
-
-        if (execName == null || execName.isBlank()) {
-            commandLine.add(execPath);
-        } else {
-            commandLine.add(execName);
-        }
-
-        List<String> args = cmd.getArgList();
-        if (args != null && !args.isEmpty()) {
-            commandLine.addAll(args);
-        }
-
-        Process process;
-        try {
-            process = new ProcessBuilder(commandLine)
-                    .directory(new File(cmd.getWorkspace()))
-                    .start();
-        } catch (IOException e) {
-            throw new RuntimeException(e.getMessage(), e);
-        }
-
-        try (InputStream stdout = process.getInputStream();
-             InputStream stderr = process.getErrorStream()) {
-            byte[] outBytes = stdout.readAllBytes();
-            byte[] errBytes = stderr.readAllBytes();
-            if (outBytes.length > 0) {
-                System.out.print(new String(outBytes, StandardCharsets.UTF_8));
-            }
-            if (errBytes.length > 0) {
-                System.err.print(new String(errBytes, StandardCharsets.UTF_8));
-            }
-            process.waitFor();
-        } catch (IOException e) {
-            throw new RuntimeException(e.getMessage(), e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("interrupted", e);
-        }
+        runWithStreams(cmd, System.in, System.out, System.err);
     }
 
     @Override
@@ -93,32 +52,53 @@ public class ExternalCommand implements CCRunnable {
 
         Thread stdinThread = null;
         if (!inheritInput) {
-            stdinThread = pipe(in, process.getOutputStream(), true);
+            stdinThread = pipe(in, process.getOutputStream(), true, null);
         }
-        Thread stdoutThread = pipe(process.getInputStream(), out, false);
-        Thread stderrThread = pipe(process.getErrorStream(), err, false);
+        Runnable onStdoutFailure = out == System.out ? null : process::destroy;
+        Thread stdoutThread = pipe(process.getInputStream(), out, false, onStdoutFailure);
+        Thread stderrThread = pipe(process.getErrorStream(), err, false, null);
 
         try {
             process.waitFor();
             if (stdinThread != null) {
+                if (in != null && in != System.in) {
+                    try {
+                        in.close();
+                    } catch (IOException e) {
+                        // Ignore close failures.
+                    }
+                }
                 stdinThread.join();
             }
             stdoutThread.join();
             stderrThread.join();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new RuntimeException("interrupted", e);
+            process.destroy();
+            return;
         }
     }
 
-    private static Thread pipe(InputStream in, OutputStream out, boolean closeOut) {
+    private static Thread pipe(InputStream in,
+                               OutputStream out,
+                               boolean closeOut,
+                               Runnable onFailure) {
         Thread thread = new Thread(() -> {
             try {
                 if (in != null) {
                     in.transferTo(out);
                 }
             } catch (IOException e) {
-                // Ignore pipe errors once the process exits or streams close.
+                if (onFailure != null) {
+                    onFailure.run();
+                }
+                if (in != null) {
+                    try {
+                        in.close();
+                    } catch (IOException ignored) {
+                        // Ignore close failures.
+                    }
+                }
             } finally {
                 try {
                     out.flush();

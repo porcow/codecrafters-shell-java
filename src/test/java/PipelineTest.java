@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,6 +49,27 @@ public class PipelineTest {
         String output = TestUtils.captureStdout(() -> Main.evalInput(command));
 
         assertEquals("HELLO" + System.lineSeparator(), output);
+    }
+
+    @Test
+    void eval_tailFollowPipesIntoHead(@TempDir Path tempDir) throws Exception {
+        String tailPath = Command.findExecutable("tail");
+        String headPath = Command.findExecutable("head");
+        Assumptions.assumeTrue(tailPath != null && headPath != null);
+
+        Path input = tempDir.resolve("lines.txt");
+        String expected = String.join(System.lineSeparator(),
+                "1. blueberry orange",
+                "2. pear mango",
+                "3. raspberry banana",
+                "");
+        String content = expected + System.lineSeparator() + System.lineSeparator();
+        Files.writeString(input, content);
+
+        String command = tailPath + " -f " + input + " | " + headPath + " -n 5";
+        String output = TestUtils.captureStdout(() -> Main.evalInput(command));
+
+        assertEquals(expected, output.stripTrailing() + System.lineSeparator());
     }
 
     @Test
