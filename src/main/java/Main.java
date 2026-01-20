@@ -75,7 +75,7 @@ public class Main {
         }
 
         java.util.Set<String> unique = new java.util.TreeSet<>();
-        for (String builtin : AUTOCOMPLETE_BUILTINS) {
+        for (String builtin : builtinMap.keySet()) {
             if (builtin.startsWith(token)) {
                 unique.add(builtin);
             }
@@ -176,7 +176,23 @@ public class Main {
 
         String buffer = reader.getBuffer().toString();
         if (buffer.equals(lastTabBuffer)) {
-            reader.printAbove(String.join("  ", matches));
+            String terminalType = reader.getTerminal().getType();
+            if (System.console() == null
+                    || terminalType == null
+                    || terminalType.startsWith("dumb")) {
+                System.out.print("\n" + String.join("  ", matches) + "\n" + PROMPT + prefix);
+                System.out.flush();
+            } else {
+                java.io.Writer writer = reader.getTerminal().writer();
+                try {
+                    writer.write("\n" + String.join("  ", matches) + "\n");
+                    writer.flush();
+                } catch (java.io.IOException e) {
+                    // Ignore write failures in non-interactive terminals.
+                }
+                reader.getBuffer().cursor(prefix.length());
+                reader.callWidget(LineReader.REDRAW_LINE);
+            }
         } else {
             ringBell(reader);
         }
@@ -205,6 +221,14 @@ public class Main {
     }
 
     private static void ringBell(LineReader reader) {
+        String terminalType = reader.getTerminal().getType();
+        if (System.console() == null
+                || terminalType == null
+                || terminalType.startsWith("dumb")) {
+            System.out.print("\007");
+            System.out.flush();
+            return;
+        }
         java.io.Writer writer = reader.getTerminal().writer();
         try {
             writer.write("\007");
