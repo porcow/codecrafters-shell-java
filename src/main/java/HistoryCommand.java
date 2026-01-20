@@ -51,7 +51,7 @@ public class HistoryCommand implements CCRunnable {
         if (historyFilePath == null || historyFilePath.isBlank()) {
             return;
         }
-        writeToFile(historyFilePath);
+        appendToFile(historyFilePath);
     }
 
     @Override
