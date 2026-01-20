@@ -119,6 +119,53 @@ public class AutocompleteTest {
         assertEquals(true, normalized.contains("BUFFER=exp"));
     }
 
+    @Test
+    void lcpCompletionExtendsPrefix(@TempDir Path tempDir) throws Exception {
+        Path one = tempDir.resolve("xyz_foo");
+        Path two = tempDir.resolve("xyz_foo_bar");
+        Path three = tempDir.resolve("xyz_foo_bar_baz");
+        Files.writeString(one, "#!/bin/sh\necho ok\n");
+        Files.writeString(two, "#!/bin/sh\necho ok\n");
+        Files.writeString(three, "#!/bin/sh\necho ok\n");
+        try {
+            Files.setPosixFilePermissions(one, PosixFilePermissions.fromString("rwxr-xr-x"));
+            Files.setPosixFilePermissions(two, PosixFilePermissions.fromString("rwxr-xr-x"));
+            Files.setPosixFilePermissions(three, PosixFilePermissions.fromString("rwxr-xr-x"));
+        } catch (UnsupportedOperationException e) {
+            one.toFile().setExecutable(true);
+            two.toFile().setExecutable(true);
+            three.toFile().setExecutable(true);
+        }
+
+        String output = runWithPathLcp(tempDir.toString(), "xyz_");
+
+        assertEquals(false, output.contains("\u0007"));
+        assertEquals(true, output.contains("BUFFER=xyz_foo"));
+    }
+
+    @Test
+    void lcpCompletionProgressesAndFinishes(@TempDir Path tempDir) throws Exception {
+        Path one = tempDir.resolve("xyz_foo");
+        Path two = tempDir.resolve("xyz_foo_bar");
+        Path three = tempDir.resolve("xyz_foo_bar_baz");
+        Files.writeString(one, "#!/bin/sh\necho ok\n");
+        Files.writeString(two, "#!/bin/sh\necho ok\n");
+        Files.writeString(three, "#!/bin/sh\necho ok\n");
+        try {
+            Files.setPosixFilePermissions(one, PosixFilePermissions.fromString("rwxr-xr-x"));
+            Files.setPosixFilePermissions(two, PosixFilePermissions.fromString("rwxr-xr-x"));
+            Files.setPosixFilePermissions(three, PosixFilePermissions.fromString("rwxr-xr-x"));
+        } catch (UnsupportedOperationException e) {
+            one.toFile().setExecutable(true);
+            two.toFile().setExecutable(true);
+            three.toFile().setExecutable(true);
+        }
+
+        String output = runWithPathLcp(tempDir.toString(), "xyz_", "_", "_");
+
+        assertEquals(true, output.contains("BUFFER=xyz_foo_bar_baz "));
+    }
+
     private String runWithPath(String pathValue, String token) throws Exception {
         String javaBin = Path.of(System.getProperty("java.home"), "bin", "java").toString();
         String classpath = System.getProperty("java.class.path");
@@ -184,6 +231,31 @@ public class AutocompleteTest {
         return output;
     }
 
+    private String runWithPathLcp(String pathValue, String token, String... appendAfterTabs) throws Exception {
+        String javaBin = Path.of(System.getProperty("java.home"), "bin", "java").toString();
+        String classpath = System.getProperty("java.class.path");
+
+        List<String> command = new ArrayList<>();
+        command.add(javaBin);
+        command.add("-cp");
+        command.add(classpath);
+        command.add(LcpHarness.class.getName());
+        command.add(pathValue);
+        command.add(token);
+        for (String append : appendAfterTabs) {
+            command.add(append);
+        }
+
+        ProcessBuilder builder = new ProcessBuilder(command);
+        Map<String, String> env = builder.environment();
+        String pathEnv = pathValue == null ? env.getOrDefault("PATH", "") : pathValue;
+        env.put("PATH", pathEnv);
+        Process process = builder.start();
+        String output = new String(process.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        process.waitFor();
+        return output;
+    }
+
     public static class AutocompleteHarness {
         public static void main(String[] args) throws Exception {
             String token = args.length > 1 ? args[1] : "";
@@ -219,6 +291,45 @@ public class AutocompleteTest {
 
             Method handleTab = Main.class.getDeclaredMethod("handleTab", LineReader.class);
             handleTab.setAccessible(true);
+            handleTab.invoke(null, reader);
+
+            System.out.print("BUFFER=" + reader.getBuffer().toString());
+        }
+    }
+
+    public static class LcpHarness {
+        public static void main(String[] args) throws Exception {
+            String token = args.length > 1 ? args[1] : "";
+            java.lang.reflect.Field lastTab = Main.class.getDeclaredField("lastTabBuffer");
+            lastTab.setAccessible(true);
+            lastTab.set(null, null);
+
+            Terminal terminal = TerminalBuilder.builder()
+                    .system(false)
+                    .dumb(true)
+                    .type("dumb")
+                    .build();
+            DefaultParser parser = new DefaultParser();
+            parser.setEscapeChars(new char[0]);
+            LineReader reader = LineReaderBuilder.builder()
+                    .terminal(terminal)
+                    .parser(parser)
+                    .build();
+            reader.getBuffer().write(token);
+            reader.getBuffer().cursor(reader.getBuffer().length());
+
+            Method handleTab = Main.class.getDeclaredMethod("handleTab", LineReader.class);
+            handleTab.setAccessible(true);
+
+            for (int i = 2; i < args.length; i++) {
+                handleTab.invoke(null, reader);
+                String append = args[i];
+                if (append != null && !append.isEmpty()) {
+                    reader.getBuffer().write(append);
+                    reader.getBuffer().cursor(reader.getBuffer().length());
+                }
+            }
+
             handleTab.invoke(null, reader);
 
             System.out.print("BUFFER=" + reader.getBuffer().toString());

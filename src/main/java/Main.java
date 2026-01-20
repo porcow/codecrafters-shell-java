@@ -175,6 +175,13 @@ public class Main {
             return true;
         }
 
+        String commonPrefix = longestCommonPrefix(matches);
+        if (commonPrefix.length() > prefix.length()) {
+            reader.getBuffer().write(commonPrefix.substring(prefix.length()));
+            lastTabBuffer = null;
+            return true;
+        }
+
         String buffer = reader.getBuffer().toString();
         if (buffer.equals(lastTabBuffer)) {
             String terminalType = reader.getTerminal().getType();
@@ -237,6 +244,26 @@ public class Main {
         } catch (java.io.IOException e) {
             // Ignore bell failures in non-interactive terminals.
         }
+    }
+
+    private static String longestCommonPrefix(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return "";
+        }
+        String prefix = values.get(0);
+        for (int i = 1; i < values.size(); i++) {
+            String value = values.get(i);
+            int max = Math.min(prefix.length(), value.length());
+            int idx = 0;
+            while (idx < max && prefix.charAt(idx) == value.charAt(idx)) {
+                idx++;
+            }
+            prefix = prefix.substring(0, idx);
+            if (prefix.isEmpty()) {
+                break;
+            }
+        }
+        return prefix;
     }
 
     public static Command parse(String inputString) {
