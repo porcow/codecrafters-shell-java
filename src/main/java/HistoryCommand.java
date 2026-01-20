@@ -36,7 +36,7 @@ public class HistoryCommand implements CCRunnable {
             return;
         }
         historyFilePath = histFile;
-        record("history -r " + histFile);
+        //record("history -r " + histFile);
         readFromFile(histFile);
         lastAppendIndex = HISTORY.size();
     }
