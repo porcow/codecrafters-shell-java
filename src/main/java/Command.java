@@ -3,7 +3,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Command {
-    final static String[] BUILTINS = {"exit", "echo", "type", "pwd", "cd"};
+    final static String[] BUILTINS = {"exit", "echo", "type", "pwd", "cd", "history"};
 
     private boolean runable;
     private String name;

@@ -36,6 +36,7 @@ public class Main {
             put("type", TypeCommand.getInstance());
             put("pwd", PwdCommand.getInstance());
             put("cd", CdCommand.getInstance());
+            put("history", HistoryCommand.getInstance());
         }};
 
     public static void main(String[] args) throws Exception {
@@ -270,6 +271,9 @@ public class Main {
     }
 
     public static void evalInput(String inputString) {
+        if (inputString != null && !inputString.isBlank()) {
+            HistoryCommand.record(inputString.trim());
+        }
         List<String> pipelineParts = CCParser.splitPipeline(inputString);
         if (pipelineParts.size() > 1) {
             evalPipeline(pipelineParts);
