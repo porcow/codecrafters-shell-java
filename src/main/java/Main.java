@@ -26,7 +26,6 @@ public class Main {
 
     private static final Scanner SCANNER = new Scanner(System.in);
     private static final String PROMPT = "$ ";
-    private static final String[] AUTOCOMPLETE_BUILTINS = {"echo", "exit"};
     private static final LineReader LINE_READER = buildLineReader();
     private static String lastTabBuffer = null;
     final static Map<String, CCRunnable> builtinMap = new HashMap<String, CCRunnable>() {{
