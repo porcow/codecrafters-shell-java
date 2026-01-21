@@ -1,0 +1,17 @@
+history -r /Users/porco/Projects/learn-java/codecrafters-shell-java/history.log
+history -r /Users/porco/Projects/learn-java/codecrafters-shell-java/history.log
+pwd
+cd ..
+pwd
+echo hello
+exit
+history
+exit
+history
+hello
+ls
+ls -l
+history
+exit
+history
+exit
