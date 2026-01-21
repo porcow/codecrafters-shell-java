@@ -1,11 +1,14 @@
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.BufferedWriter;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 public class HistoryCommand implements CCRunnable {
     private static final List<String> HISTORY = new ArrayList<>();
@@ -122,11 +125,9 @@ public class HistoryCommand implements CCRunnable {
             if (!Files.exists(file)) {
                 return;
             }
-            List<String> lines = Files.readAllLines(file);
-            for (String line : lines) {
-                if (line != null && !line.isBlank()) {
-                    HISTORY.add(line);
-                }
+            try (Stream<String> lines = Files.lines(file, StandardCharsets.UTF_8)) {
+                lines.filter(line -> line != null && !line.isBlank())
+                        .forEach(HISTORY::add);
             }
         } catch (Exception e) {
             // Ignore history file read failures.
@@ -141,16 +142,17 @@ public class HistoryCommand implements CCRunnable {
         if (start >= HISTORY.size()) {
             return;
         }
-        StringBuilder builder = new StringBuilder();
-        for (int i = start; i < HISTORY.size(); i++) {
-            builder.append(HISTORY.get(i)).append(System.lineSeparator());
-        }
         try {
             Path file = Path.of(path);
-            Files.writeString(file,
-                    builder.toString(),
+            try (BufferedWriter writer = Files.newBufferedWriter(file,
+                    StandardCharsets.UTF_8,
                     StandardOpenOption.CREATE,
-                    StandardOpenOption.APPEND);
+                    StandardOpenOption.APPEND)) {
+                for (int i = start; i < HISTORY.size(); i++) {
+                    writer.write(HISTORY.get(i));
+                    writer.newLine();
+                }
+            }
             lastAppendIndex = HISTORY.size();
         } catch (Exception e) {
             // Ignore history file append failures.
@@ -161,16 +163,17 @@ public class HistoryCommand implements CCRunnable {
         if (path == null || path.isBlank()) {
             return;
         }
-        StringBuilder builder = new StringBuilder();
-        for (String entry : HISTORY) {
-            builder.append(entry).append(System.lineSeparator());
-        }
         try {
             Path file = Path.of(path);
-            Files.writeString(file,
-                    builder.toString(),
+            try (BufferedWriter writer = Files.newBufferedWriter(file,
+                    StandardCharsets.UTF_8,
                     StandardOpenOption.CREATE,
-                    StandardOpenOption.TRUNCATE_EXISTING);
+                    StandardOpenOption.TRUNCATE_EXISTING)) {
+                for (String entry : HISTORY) {
+                    writer.write(entry);
+                    writer.newLine();
+                }
+            }
         } catch (Exception e) {
             // Ignore history file write failures.
         }

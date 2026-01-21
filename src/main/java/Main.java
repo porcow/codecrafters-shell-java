@@ -8,7 +8,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -328,21 +327,21 @@ public class Main {
             System.out.println(parsed.command().getName() + ": command not found");
             return;
         }
-        Command sink = new Command();
-        try {
+        boolean append = parsed.redirectType() == CCParser.RedirectType.STDOUT_APPEND
+                || parsed.redirectType() == CCParser.RedirectType.STDERR_APPEND;
+        try (OutputStream redirectStream = openRedirectStream(parsed.command(),
+                redirectTokens.get(0),
+                append)) {
             if (parsed.redirectType() == CCParser.RedirectType.STDERR
                     || parsed.redirectType() == CCParser.RedirectType.STDERR_APPEND) {
-                runner.stderr(parsed.command(), sink);
+                runner.runWithStreams(parsed.command(), System.in, System.out, redirectStream);
             } else {
-                runner.stdout(parsed.command(), sink);
+                runner.runWithStreams(parsed.command(), System.in, redirectStream, System.err);
             }
-            writeRedirectOutput(parsed.command(),
-                    redirectTokens.get(0),
-                    sink.getArgString(),
-                    parsed.redirectType() == CCParser.RedirectType.STDOUT_APPEND
-                            || parsed.redirectType() == CCParser.RedirectType.STDERR_APPEND);
         } catch (RuntimeException e) {
             reportRunError(parsed.command(), e);
+        } catch (Exception e) {
+            reportRunError(parsed.command(), new RuntimeException(e.getMessage(), e));
         }
     }
 
@@ -582,10 +581,9 @@ public class Main {
                 && (command.isBuiltin() || command.isRunable());
     }
 
-    private static void writeRedirectOutput(Command command,
-                                            String redirectPath,
-                                            String output,
-                                            boolean append) {
+    private static OutputStream openRedirectStream(Command command,
+                                                   String redirectPath,
+                                                   boolean append) {
         try {
             Path path = Path.of(redirectPath);
             if (!path.isAbsolute()) {
@@ -595,13 +593,14 @@ public class Main {
                 }
                 path = Path.of(base).resolve(redirectPath);
             }
-            String content = output == null ? "" : output;
             if (append) {
-                Files.writeString(path.normalize(), content, StandardCharsets.UTF_8,
-                        StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+                return Files.newOutputStream(path.normalize(),
+                        StandardOpenOption.CREATE,
+                        StandardOpenOption.APPEND);
             } else {
-                Files.writeString(path.normalize(), content, StandardCharsets.UTF_8,
-                        StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+                return Files.newOutputStream(path.normalize(),
+                        StandardOpenOption.CREATE,
+                        StandardOpenOption.TRUNCATE_EXISTING);
             }
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage(), e);
