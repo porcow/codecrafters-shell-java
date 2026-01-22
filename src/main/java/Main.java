@@ -1,7 +1,5 @@
 import java.util.Scanner;
-import java.util.Map;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.io.File;
 import java.io.InputStream;
@@ -26,18 +24,8 @@ public class Main {
 
     private static final Scanner SCANNER = new Scanner(System.in);
     private static final String PROMPT = "$ ";
-    private static final String[] AUTOCOMPLETE_BUILTINS = {"echo", "exit"};
     private static final LineReader LINE_READER = buildLineReader();
     private static String lastTabBuffer = null;
-    final static Map<String, CCRunnable> builtinMap = new HashMap<String, CCRunnable>() {{
-            put("echo", EchoCommand.getInstance());
-            put("exit", ExitCommand.getInstance());
-            put("type", TypeCommand.getInstance());
-            put("pwd", PwdCommand.getInstance());
-            put("cd", CdCommand.getInstance());
-            put("history", HistoryCommand.getInstance());
-        }};
-
     public static void main(String[] args) throws Exception {
         HistoryCommand.initializeFromEnv();
 
@@ -80,7 +68,7 @@ public class Main {
         }
 
         java.util.Set<String> unique = new java.util.TreeSet<>();
-        for (String builtin : builtinMap.keySet()) {
+        for (String builtin : Command.getBuiltinMap().keySet()) {
             if (builtin.startsWith(token)) {
                 unique.add(builtin);
             }
@@ -296,29 +284,6 @@ public class Main {
         List<String> redirectTokens = CCParser.parseArguments(parsed.redirectPart());
         if (redirectTokens.isEmpty()) {
             runCommand(parsed.command());
-            return;
-        }
-
-        Command rightCommand = CCParser.parseTokens(redirectTokens);
-        if ((parsed.redirectType() == CCParser.RedirectType.STDOUT
-                || parsed.redirectType() == CCParser.RedirectType.STDERR)
-                && isRunnableCommand(rightCommand)) {
-            CCRunnable runner = resolveRunner(parsed.command());
-            if (runner == null) {
-                System.out.println(parsed.command().getName() + ": command not found");
-                return;
-            }
-            try {
-                if (parsed.redirectType() == CCParser.RedirectType.STDERR) {
-                    runner.stderr(parsed.command(), rightCommand);
-                } else {
-                    runner.stdout(parsed.command(), rightCommand);
-                }
-            } catch (RuntimeException e) {
-                reportRunError(parsed.command(), e);
-                return;
-            }
-            runCommand(rightCommand);
             return;
         }
 
@@ -559,7 +524,7 @@ public class Main {
             return null;
         }
         if (command.isBuiltin()) {
-            return builtinMap.get(command.getName());
+            return Command.getBuiltinMap().get(command.getName());
         }
         if (command.isRunable()) {
             return ExternalCommand.getInstance();
@@ -574,11 +539,6 @@ public class Main {
         }
 
         System.err.println(command.getName() + ": " + message);
-    }
-
-    private static boolean isRunnableCommand(Command command) {
-        return command != null && command.getName() != null
-                && (command.isBuiltin() || command.isRunable());
     }
 
     private static OutputStream openRedirectStream(Command command,

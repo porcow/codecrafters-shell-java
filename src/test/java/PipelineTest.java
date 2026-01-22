@@ -19,14 +19,6 @@ public class PipelineTest {
         Command.setCurrentWorkspace(System.getProperty("user.dir"));
     }
 
-    @Test
-    void eval_redirectsStdoutToRunnableCommand() {
-        CCParser.ParsedLine parsed = CCParser.parseLine("echo hello world > echo");
-
-        String output = TestUtils.captureStdout(() -> Main.eval(parsed));
-
-        assertEquals("hello world" + System.lineSeparator(), output);
-    }
 
     @Test
     void eval_pipeIgnoresQuotedPipe() {
@@ -73,30 +65,39 @@ public class PipelineTest {
     }
 
     @Test
-    void eval_splitsOnOneGreaterThan() {
-        CCParser.ParsedLine parsed = CCParser.parseLine("echo hello 1> echo");
+    void eval_splitsOnOneGreaterThan() throws Exception {
+        Command.setCurrentWorkspace(tempDir.toAbsolutePath().toString());
+        CCParser.ParsedLine parsed = CCParser.parseLine("echo hello 1> output.txt");
 
         String output = TestUtils.captureStdout(() -> Main.eval(parsed));
 
-        assertEquals("hello" + System.lineSeparator(), output);
+        assertEquals("", output);
+        String content = Files.readString(tempDir.resolve("output.txt"));
+        assertEquals("hello" + System.lineSeparator(), content);
     }
 
     @Test
-    void eval_ignoresEscapedGreaterThan() {
-        CCParser.ParsedLine parsed = CCParser.parseLine("echo a\\>b > echo");
+    void eval_ignoresEscapedGreaterThan() throws Exception {
+        Command.setCurrentWorkspace(tempDir.toAbsolutePath().toString());
+        CCParser.ParsedLine parsed = CCParser.parseLine("echo a\\>b > output.txt");
 
         String output = TestUtils.captureStdout(() -> Main.eval(parsed));
 
-        assertEquals("a>b" + System.lineSeparator(), output);
+        assertEquals("", output);
+        String content = Files.readString(tempDir.resolve("output.txt"));
+        assertEquals("a>b" + System.lineSeparator(), content);
     }
 
     @Test
-    void eval_ignoresQuotedGreaterThan() {
-        CCParser.ParsedLine parsed = CCParser.parseLine("echo \"a>b\" > echo");
+    void eval_ignoresQuotedGreaterThan() throws Exception {
+        Command.setCurrentWorkspace(tempDir.toAbsolutePath().toString());
+        CCParser.ParsedLine parsed = CCParser.parseLine("echo \"a>b\" > output.txt");
 
         String output = TestUtils.captureStdout(() -> Main.eval(parsed));
 
-        assertEquals("a>b" + System.lineSeparator(), output);
+        assertEquals("", output);
+        String content = Files.readString(tempDir.resolve("output.txt"));
+        assertEquals("a>b" + System.lineSeparator(), content);
     }
 
     @Test
@@ -150,14 +151,16 @@ public class PipelineTest {
 
 
     @Test
-    void eval_redirectsStderrToRunnableCommand() {
+    void eval_redirectsStderrToFile() throws Exception {
         Command.setCurrentWorkspace(tempDir.toAbsolutePath().toString());
-        CCParser.ParsedLine parsed = CCParser.parseLine("cat missing.txt 2> echo");
+        CCParser.ParsedLine parsed = CCParser.parseLine("cat missing.txt 2> errors.txt");
 
         String output = TestUtils.captureStdout(() -> Main.eval(parsed));
 
-        assertTrue(output.contains("cat:"));
-        assertTrue(output.contains("No such file or directory"));
+        assertEquals("", output);
+        String content = Files.readString(tempDir.resolve("errors.txt"));
+        assertTrue(content.contains("cat:"));
+        assertTrue(content.contains("No such file or directory"));
     }
 
     @Test

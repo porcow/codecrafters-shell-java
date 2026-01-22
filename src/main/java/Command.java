@@ -1,9 +1,18 @@
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Command {
-    final static String[] BUILTINS = {"exit", "echo", "type", "pwd", "cd", "history"};
+    private static final Map<String, CCRunnable> BUILTIN_MAP = new HashMap<>() {{
+        put("echo", EchoCommand.getInstance());
+        put("exit", ExitCommand.getInstance());
+        put("type", TypeCommand.getInstance());
+        put("pwd", PwdCommand.getInstance());
+        put("cd", CdCommand.getInstance());
+        put("history", HistoryCommand.getInstance());
+    }};
 
     private boolean runable;
     private String name;
@@ -60,13 +69,12 @@ public class Command {
         return command;
     }
 
+    public static Map<String, CCRunnable> getBuiltinMap() {
+        return BUILTIN_MAP;
+    }
+
     private static boolean isBuiltin(String name) {
-        for (String builtin : BUILTINS) {
-            if (builtin.equals(name)) {
-                return true;
-            }
-        }
-        return false;
+        return BUILTIN_MAP.containsKey(name);
     }
 
     public static String findExecutable(String name) {
@@ -89,14 +97,6 @@ public class Command {
             return found;
         }
 
-        String escaped = escapeUnescapedSingleQuotes(name);
-        if (!escaped.equals(name)) {
-            found = findExecutableInPath(escaped, pathEnv);
-            if (found != null) {
-                return found;
-            }
-        }
-
         return null;
     }
 
@@ -110,18 +110,6 @@ public class Command {
             }
         }
         return null;
-    }
-
-    private static String escapeUnescapedSingleQuotes(String name) {
-        StringBuilder escaped = new StringBuilder();
-        for (int i = 0; i < name.length(); i++) {
-            char ch = name.charAt(i);
-            if (ch == '\'' && (i == 0 || name.charAt(i - 1) != '\\')) {
-                escaped.append('\\');
-            }
-            escaped.append(ch);
-        }
-        return escaped.toString();
     }
 
     public boolean isRunable() {

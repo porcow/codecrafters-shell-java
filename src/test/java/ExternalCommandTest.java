@@ -66,16 +66,6 @@ public class ExternalCommandTest {
     }
 
     @Test
-    void run_usesResolvedPathForQuotedExecutableName() throws Exception {
-        Path exec = writeEchoScript(tempDir.resolve("my \\'echo\\'"));
-        Assumptions.assumeTrue(Files.isExecutable(exec));
-        String output = runWithTempPath("\"my \\\\'echo\\\\'\" hello");
-
-        assertEquals("hello" + System.lineSeparator(), output);
-    }
-
-
-    @Test
     void run_usesResolvedPathForQuotedExecutableWithBackslashNNoSpace() throws Exception {
         Path exec = writeEchoScript(tempDir.resolve("my \\necho"));
         Assumptions.assumeTrue(Files.isExecutable(exec));
