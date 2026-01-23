@@ -1,7 +1,9 @@
-import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.nio.charset.StandardCharsets;
 
 public interface CCRunnable {
@@ -27,16 +29,13 @@ public interface CCRunnable {
         }
     }
 
-    default void stdout(Command source, Command target) {
-        String output = captureStream(true, () -> run(source));
-        target.setArgString(output);
-        target.setArgList(CCParser.parseArguments(output));
+    // Caller must consume/close the returned stream to avoid blocking the producer.
+    default InputStream stdoutStream(Command source) {
+        return streamFrom(source, true);
     }
 
-    default void stderr(Command source, Command target) {
-        String output = captureStream(false, () -> run(source));
-        target.setArgString(output);
-        target.setArgList(CCParser.parseArguments(output));
+    default InputStream stderrStream(Command source) {
+        return streamFrom(source, false);
     }
 
     static PrintStream toPrintStream(OutputStream out) {
@@ -46,25 +45,30 @@ public interface CCRunnable {
         return new PrintStream(out, true, StandardCharsets.UTF_8);
     }
 
-    private static String captureStream(boolean stdout, Runnable action) {
-        PrintStream original = stdout ? System.out : System.err;
-        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8);
-        if (stdout) {
-            System.setOut(capture);
-        } else {
-            System.setErr(capture);
-        }
+    private InputStream streamFrom(Command source, boolean stdout) {
         try {
-            action.run();
-        } finally {
-            capture.flush();
-            if (stdout) {
-                System.setOut(original);
-            } else {
-                System.setErr(original);
-            }
+            PipedInputStream pipeIn = new PipedInputStream(64 * 1024);
+            PipedOutputStream pipeOut = new PipedOutputStream(pipeIn);
+            Thread thread = new Thread(() -> {
+                try {
+                    if (stdout) {
+                        runWithStreams(source, System.in, pipeOut, System.err);
+                    } else {
+                        runWithStreams(source, System.in, System.out, pipeOut);
+                    }
+                } finally {
+                    try {
+                        pipeOut.close();
+                    } catch (IOException e) {
+                        // Ignore close failures on shutdown.
+                    }
+                }
+            });
+            thread.setDaemon(true);
+            thread.start();
+            return pipeIn;
+        } catch (IOException e) {
+            throw new RuntimeException(e.getMessage(), e);
         }
-        return buffer.toString(StandardCharsets.UTF_8);
     }
 }

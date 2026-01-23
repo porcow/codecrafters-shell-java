@@ -2,10 +2,12 @@ import java.util.Scanner;
 import java.util.ArrayList;
 import java.util.List;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -85,16 +87,18 @@ public class Main {
                 if (dirPath.isBlank()) {
                     continue;
                 }
-                File directory = new File(dirPath);
-                File[] entries = directory.listFiles();
-                if (entries == null) {
-                    continue;
-                }
-                for (File entry : entries) {
-                    String name = entry.getName();
-                    if (entry.isFile() && entry.canExecute() && name.startsWith(token)) {
-                        unique.add(name);
+                Path directory = Path.of(dirPath);
+                try (DirectoryStream<Path> entries = Files.newDirectoryStream(directory)) {
+                    for (Path entry : entries) {
+                        String name = entry.getFileName().toString();
+                        if (name.startsWith(token)
+                                && Files.isRegularFile(entry)
+                                && Files.isExecutable(entry)) {
+                            unique.add(name);
+                        }
                     }
+                } catch (IOException | SecurityException e) {
+                    // Ignore unreadable PATH directories.
                 }
             }
         }

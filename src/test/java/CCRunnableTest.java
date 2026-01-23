@@ -1,12 +1,13 @@
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.util.List;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.Test;
 
 public class CCRunnableTest {
     @Test
-    void stdout_capturesOutputIntoTargetCommand() {
+    void stdout_streamsOutput() throws Exception {
         CCRunnable runner = new CCRunnable() {
             @Override
             public void run(Command cmd) {
@@ -14,16 +15,17 @@ public class CCRunnableTest {
             }
         };
         Command source = Command.build("echo", "");
-        Command target = new Command();
 
-        runner.stdout(source, target);
+        String output;
+        try (InputStream in = runner.stdoutStream(source)) {
+            output = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        }
 
-        assertEquals("hello world", target.getArgString());
-        assertEquals(List.of("hello", "world"), target.getArgList());
+        assertEquals("hello world", output);
     }
 
     @Test
-    void stderr_capturesOutputIntoTargetCommand() {
+    void stderr_streamsOutput() throws Exception {
         CCRunnable runner = new CCRunnable() {
             @Override
             public void run(Command cmd) {
@@ -31,11 +33,12 @@ public class CCRunnableTest {
             }
         };
         Command source = Command.build("echo", "");
-        Command target = new Command();
 
-        runner.stderr(source, target);
+        String output;
+        try (InputStream in = runner.stderrStream(source)) {
+            output = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        }
 
-        assertEquals("boom", target.getArgString());
-        assertEquals(List.of("boom"), target.getArgList());
+        assertEquals("boom", output);
     }
 }

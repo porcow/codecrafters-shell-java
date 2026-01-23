@@ -137,7 +137,7 @@ public class PipelineTest {
     }
 
     @Test
-    void eval_redirectsStderrToFile() throws Exception {
+    void eval_redirectsStderrToFile_withStdout() throws Exception {
         Command.setCurrentWorkspace(tempDir.toAbsolutePath().toString());
         Files.writeString(tempDir.resolve("existing.txt"), "contents" + System.lineSeparator());
         CCParser.ParsedLine parsed = CCParser.parseLine("cat existing.txt missing.txt 2> errors.txt");
@@ -151,7 +151,7 @@ public class PipelineTest {
 
 
     @Test
-    void eval_redirectsStderrToFile() throws Exception {
+    void eval_redirectsStderrToFile_onlyErrors() throws Exception {
         Command.setCurrentWorkspace(tempDir.toAbsolutePath().toString());
         CCParser.ParsedLine parsed = CCParser.parseLine("cat missing.txt 2> errors.txt");
 
