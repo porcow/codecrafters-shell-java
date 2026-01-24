@@ -8,4 +8,10 @@
 
 set -e # Exit on failure
 
-exec java --enable-preview --enable-native-access=ALL-UNNAMED -jar /tmp/codecrafters-build-shell-java/codecrafters-shell.jar "$@"
+exec java \
+  -Xms16m -Xmx64m \
+  -XX:TieredStopAtLevel=1 \
+  -XX:+UseSerialGC \
+  --enable-preview \
+  --enable-native-access=ALL-UNNAMED \
+  -jar /tmp/codecrafters-build-shell-java/codecrafters-shell.jar "$@"
