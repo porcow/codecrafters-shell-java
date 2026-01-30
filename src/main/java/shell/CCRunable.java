@@ -1,3 +1,5 @@
+package shell;
+
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -6,28 +8,12 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.nio.charset.StandardCharsets;
 
-public interface CCRunnable {
-    void run(Command cmd);
-
-    default void runWithStreams(Command cmd, InputStream in, OutputStream out, OutputStream err) {
-        InputStream originalIn = System.in;
-        PrintStream originalOut = System.out;
-        PrintStream originalErr = System.err;
-        PrintStream newOut = toPrintStream(out);
-        PrintStream newErr = toPrintStream(err);
-        try {
-            if (in != null) {
-                System.setIn(in);
-            }
-            System.setOut(newOut);
-            System.setErr(newErr);
-            run(cmd);
-        } finally {
-            System.setIn(originalIn);
-            System.setOut(originalOut);
-            System.setErr(originalErr);
-        }
+public interface CCRunable {
+    default void run(Command cmd) {
+        runWithStreams(cmd, System.in, System.out, System.err);
     }
+
+    void runWithStreams(Command cmd, InputStream in, OutputStream out, OutputStream err);
 
     // Caller must consume/close the returned stream to avoid blocking the producer.
     default InputStream stdoutStream(Command source) {

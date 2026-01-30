@@ -1,9 +1,10 @@
+package shell;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
@@ -21,9 +22,8 @@ import org.jline.terminal.TerminalBuilder;
 
 public class AutocompleteTest {
     private static String uniqueCommandMatch(String token) throws Exception {
-        Method method = Main.class.getDeclaredMethod("uniqueCommandMatch", String.class);
-        method.setAccessible(true);
-        return (String) method.invoke(null, token);
+        AutoCompleter completer = new AutoCompleter("$ ");
+        return completer.uniqueCommandMatch(token);
     }
 
     @Test
@@ -252,13 +252,12 @@ public class AutocompleteTest {
     }
 
     public static class AutocompleteHarness {
-        public static void main(String[] args) throws Exception {
+        public static void main(String[] args) {
             String token = args.length > 1 ? args[1] : "";
-            Method method = Main.class.getDeclaredMethod("uniqueCommandMatch", String.class);
-            method.setAccessible(true);
-            Object result = method.invoke(null, token);
+            AutoCompleter completer = new AutoCompleter("$ ");
+            String result = completer.uniqueCommandMatch(token);
             if (result != null) {
-                System.out.print(result.toString());
+                System.out.print(result);
             }
         }
     }
@@ -266,9 +265,8 @@ public class AutocompleteTest {
     public static class NoMatchTabHarness {
         public static void main(String[] args) throws Exception {
             String token = args.length > 1 ? args[1] : "";
-            java.lang.reflect.Field lastTab = Main.class.getDeclaredField("lastTabBuffer");
-            lastTab.setAccessible(true);
-            lastTab.set(null, null);
+            AutoCompleter completer = new AutoCompleter("$ ");
+            completer.resetTabState();
 
             Terminal terminal = TerminalBuilder.builder()
                     .system(false)
@@ -284,9 +282,7 @@ public class AutocompleteTest {
             reader.getBuffer().write(token);
             reader.getBuffer().cursor(reader.getBuffer().length());
 
-            Method handleTab = Main.class.getDeclaredMethod("handleTab", LineReader.class);
-            handleTab.setAccessible(true);
-            handleTab.invoke(null, reader);
+            completer.handleTab(reader);
 
             System.out.print("BUFFER=" + reader.getBuffer().toString());
         }
@@ -295,9 +291,8 @@ public class AutocompleteTest {
     public static class LcpHarness {
         public static void main(String[] args) throws Exception {
             String token = args.length > 1 ? args[1] : "";
-            java.lang.reflect.Field lastTab = Main.class.getDeclaredField("lastTabBuffer");
-            lastTab.setAccessible(true);
-            lastTab.set(null, null);
+            AutoCompleter completer = new AutoCompleter("$ ");
+            completer.resetTabState();
 
             Terminal terminal = TerminalBuilder.builder()
                     .system(false)
@@ -313,11 +308,8 @@ public class AutocompleteTest {
             reader.getBuffer().write(token);
             reader.getBuffer().cursor(reader.getBuffer().length());
 
-            Method handleTab = Main.class.getDeclaredMethod("handleTab", LineReader.class);
-            handleTab.setAccessible(true);
-
             for (int i = 2; i < args.length; i++) {
-                handleTab.invoke(null, reader);
+                completer.handleTab(reader);
                 String append = args[i];
                 if (append != null && !append.isEmpty()) {
                     reader.getBuffer().write(append);
@@ -325,7 +317,7 @@ public class AutocompleteTest {
                 }
             }
 
-            handleTab.invoke(null, reader);
+            completer.handleTab(reader);
 
             System.out.print("BUFFER=" + reader.getBuffer().toString());
         }
@@ -334,9 +326,8 @@ public class AutocompleteTest {
     public static class DoubleTabHarness {
         public static void main(String[] args) throws Exception {
             String token = args.length > 1 ? args[1] : "";
-            java.lang.reflect.Field lastTab = Main.class.getDeclaredField("lastTabBuffer");
-            lastTab.setAccessible(true);
-            lastTab.set(null, null);
+            AutoCompleter completer = new AutoCompleter("$ ");
+            completer.resetTabState();
 
             ByteArrayOutputStream output = new ByteArrayOutputStream();
             Terminal terminal = TerminalBuilder.builder()
@@ -355,12 +346,10 @@ public class AutocompleteTest {
             reader.getBuffer().cursor(reader.getBuffer().length());
             System.out.print(token);
 
-            Method handleTab = Main.class.getDeclaredMethod("handleTab", LineReader.class);
-            handleTab.setAccessible(true);
             reader.getBuffer().cursor(reader.getBuffer().length());
-            handleTab.invoke(null, reader);
+            completer.handleTab(reader);
             reader.getBuffer().cursor(reader.getBuffer().length());
-            handleTab.invoke(null, reader);
+            completer.handleTab(reader);
 
             System.out.print("\nBUFFER=" + reader.getBuffer().toString());
         }

@@ -1,8 +1,10 @@
+package shell;
+
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 
-public class PwdCommand implements CCRunnable {
+public class PwdCommand implements CCRunable {
     private static PwdCommand instance;
 
     private PwdCommand() {
@@ -16,13 +18,13 @@ public class PwdCommand implements CCRunnable {
     }
 
     @Override
-    public void run(Command cmd) {
-        runWithStreams(cmd, System.in, System.out, System.err);
-    }
-
-    @Override
     public void runWithStreams(Command cmd, InputStream in, OutputStream out, OutputStream err) {
-        PrintStream stdout = CCRunnable.toPrintStream(out);
-        stdout.println(Command.currentWorkspace);
+        PrintStream stdout = CCRunable.toPrintStream(out);
+        ShellContext context = cmd.getContext();
+        String workspace = context != null ? context.getWorkspace() : cmd.getWorkspace();
+        if (workspace == null || workspace.isBlank()) {
+            workspace = System.getProperty("user.dir");
+        }
+        stdout.println(workspace);
     }
 }

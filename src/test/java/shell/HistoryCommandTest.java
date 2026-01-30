@@ -1,3 +1,5 @@
+package shell;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.nio.file.Files;
@@ -8,15 +10,17 @@ import org.junit.jupiter.api.io.TempDir;
 
 public class HistoryCommandTest {
 
+    private final Shell shell = new Shell();
+
     @Test
     void history_printsAllCommands() {
         HistoryCommand.clearHistory();
 
-        TestUtils.captureStdout(() -> Main.evalInput("echo hello"));
-        TestUtils.captureStdout(() -> Main.evalInput("echo world"));
-        TestUtils.captureStdout(() -> Main.evalInput("invalid_command"));
+        TestUtils.captureStdout(() -> shell.evalInput("echo hello"));
+        TestUtils.captureStdout(() -> shell.evalInput("echo world"));
+        TestUtils.captureStdout(() -> shell.evalInput("invalid_command"));
 
-        String output = TestUtils.captureStdout(() -> Main.evalInput("history"));
+        String output = TestUtils.captureStdout(() -> shell.evalInput("history"));
 
         String expected = String.join(System.lineSeparator(),
                 "    1  echo hello",
@@ -31,10 +35,10 @@ public class HistoryCommandTest {
     void history_limitsToLastNCommands() {
         HistoryCommand.clearHistory();
 
-        TestUtils.captureStdout(() -> Main.evalInput("echo one"));
-        TestUtils.captureStdout(() -> Main.evalInput("echo two"));
+        TestUtils.captureStdout(() -> shell.evalInput("echo one"));
+        TestUtils.captureStdout(() -> shell.evalInput("echo two"));
 
-        String output = TestUtils.captureStdout(() -> Main.evalInput("history 2"));
+        String output = TestUtils.captureStdout(() -> shell.evalInput("history 2"));
 
         String expected = String.join(System.lineSeparator(),
                 "    2  echo two",
@@ -54,8 +58,8 @@ public class HistoryCommandTest {
         Files.writeString(historyFile, fileContent);
 
         String output = TestUtils.captureStdout(() -> {
-            Main.evalInput("history -r " + historyFile);
-            Main.evalInput("history");
+            shell.evalInput("history -r " + historyFile);
+            shell.evalInput("history");
         });
 
         String expected = String.join(System.lineSeparator(),
@@ -72,9 +76,9 @@ public class HistoryCommandTest {
         HistoryCommand.clearHistory();
         Path historyFile = tempDir.resolve("history.log");
 
-        TestUtils.captureStdout(() -> Main.evalInput("echo hello"));
-        TestUtils.captureStdout(() -> Main.evalInput("echo world"));
-        TestUtils.captureStdout(() -> Main.evalInput("history -w " + historyFile));
+        TestUtils.captureStdout(() -> shell.evalInput("echo hello"));
+        TestUtils.captureStdout(() -> shell.evalInput("echo world"));
+        TestUtils.captureStdout(() -> shell.evalInput("history -w " + historyFile));
 
         String content = Files.readString(historyFile);
         String expected = String.join(System.lineSeparator(),
@@ -90,12 +94,12 @@ public class HistoryCommandTest {
         HistoryCommand.clearHistory();
         Path historyFile = tempDir.resolve("history.log");
 
-        TestUtils.captureStdout(() -> Main.evalInput("echo initial_command_1"));
-        TestUtils.captureStdout(() -> Main.evalInput("echo initial_command_2"));
-        TestUtils.captureStdout(() -> Main.evalInput("history -w " + historyFile));
+        TestUtils.captureStdout(() -> shell.evalInput("echo initial_command_1"));
+        TestUtils.captureStdout(() -> shell.evalInput("echo initial_command_2"));
+        TestUtils.captureStdout(() -> shell.evalInput("history -w " + historyFile));
 
-        TestUtils.captureStdout(() -> Main.evalInput("echo new_command"));
-        TestUtils.captureStdout(() -> Main.evalInput("history -a " + historyFile));
+        TestUtils.captureStdout(() -> shell.evalInput("echo new_command"));
+        TestUtils.captureStdout(() -> shell.evalInput("history -a " + historyFile));
 
         String content = Files.readString(historyFile);
         String expected = String.join(System.lineSeparator(),

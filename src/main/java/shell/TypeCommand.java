@@ -1,9 +1,11 @@
+package shell;
+
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.List;
 
-public class TypeCommand implements CCRunnable {
+public class TypeCommand implements CCRunable {
     private static TypeCommand instance;
 
     private TypeCommand() {
@@ -17,13 +19,8 @@ public class TypeCommand implements CCRunnable {
     }
 
     @Override
-    public void run(Command cmd) {
-        runWithStreams(cmd, System.in, System.out, System.err);
-    }
-
-    @Override
     public void runWithStreams(Command cmd, InputStream in, OutputStream out, OutputStream err) {
-        PrintStream stdout = CCRunnable.toPrintStream(out);
+        PrintStream stdout = CCRunable.toPrintStream(out);
         List<String> args = cmd.getArgList();
         if (args == null || args.isEmpty()) {
             return;

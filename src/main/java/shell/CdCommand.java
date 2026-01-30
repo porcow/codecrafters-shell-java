@@ -1,3 +1,5 @@
+package shell;
+
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -5,7 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-public class CdCommand implements CCRunnable {
+public class CdCommand implements CCRunable {
     private static CdCommand instance;
 
     private CdCommand() {
@@ -19,16 +21,12 @@ public class CdCommand implements CCRunnable {
     }
 
     @Override
-    public void run(Command cmd) {
-        runWithStreams(cmd, System.in, System.out, System.err);
-    }
-
-    @Override
     public void runWithStreams(Command cmd, InputStream in, OutputStream out, OutputStream err) {
-        PrintStream stdout = CCRunnable.toPrintStream(out);
+        PrintStream stdout = CCRunable.toPrintStream(out);
         List<String> args = cmd.getArgList();
+        ShellContext context = cmd.getContext();
         String target = "";
-        String home = System.getenv("HOME");
+        String home = context != null ? context.getEnv("HOME") : System.getenv("HOME");
         if (args == null || args.isEmpty()) {
             target = home != null ? home : "";
         } else {
@@ -51,7 +49,10 @@ public class CdCommand implements CCRunnable {
         if (targetPath.isAbsolute()) {
             dirPath = targetPath.normalize();
         } else {
-            String base = Command.getCurrentWorkspace();
+            String base = context != null ? context.getWorkspace() : null;
+            if (base == null || base.isBlank()) {
+                base = cmd.getWorkspace();
+            }
             if (base == null || base.isBlank()) {
                 base = System.getProperty("user.dir");
             }
@@ -59,7 +60,11 @@ public class CdCommand implements CCRunnable {
         }
 
         if (Files.isDirectory(dirPath)) {
-            Command.setCurrentWorkspace(dirPath.toAbsolutePath().toString());
+            if (context != null) {
+                context.setWorkspace(dirPath.toAbsolutePath().toString());
+            } else {
+                cmd.setWorkspace(dirPath.toAbsolutePath().toString());
+            }
         } else {
             stdout.println("cd: " + target + ": No such file or directory");
         }

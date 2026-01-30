@@ -1,3 +1,5 @@
+package shell;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.InputStream;
@@ -5,13 +7,13 @@ import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.Test;
 
-public class CCRunnableTest {
+public class CCRunableTest {
     @Test
     void stdout_streamsOutput() throws Exception {
-        CCRunnable runner = new CCRunnable() {
+        CCRunable runner = new CCRunable() {
             @Override
-            public void run(Command cmd) {
-                System.out.print("hello world");
+            public void runWithStreams(Command cmd, InputStream in, java.io.OutputStream out, java.io.OutputStream err) {
+                CCRunable.toPrintStream(out).print("hello world");
             }
         };
         Command source = Command.build("echo", "");
@@ -26,10 +28,10 @@ public class CCRunnableTest {
 
     @Test
     void stderr_streamsOutput() throws Exception {
-        CCRunnable runner = new CCRunnable() {
+        CCRunable runner = new CCRunable() {
             @Override
-            public void run(Command cmd) {
-                System.err.print("boom");
+            public void runWithStreams(Command cmd, InputStream in, java.io.OutputStream out, java.io.OutputStream err) {
+                CCRunable.toPrintStream(err).print("boom");
             }
         };
         Command source = Command.build("echo", "");

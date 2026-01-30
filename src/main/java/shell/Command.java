@@ -1,3 +1,5 @@
+package shell;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -5,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 public class Command {
-    private static final Map<String, CCRunnable> BUILTIN_MAP = new HashMap<>() {{
+    private static final Map<String, CCRunable> BUILTIN_MAP = new HashMap<>() {{
         put("echo", EchoCommand.getInstance());
         put("exit", ExitCommand.getInstance());
         put("type", TypeCommand.getInstance());
@@ -21,7 +23,7 @@ public class Command {
     private String argString;
     private List<String> argList;
     private String workspace;
-    static String currentWorkspace = System.getProperty("user.dir");
+    private ShellContext context;
 
     public Command() {
         this.argList = new ArrayList<>();
@@ -32,27 +34,38 @@ public class Command {
                    boolean builtin,
                    String path,
                    String argString,
-                   String workspace) {
+                   String workspace,
+                   ShellContext context) {
         this.runable = runable;
         this.name = name;
         this.builtin = builtin;
         this.path = path;
         this.argString = argString;
         this.workspace = workspace;
+        this.context = context;
         this.argList = new ArrayList<>();
     }
 
     public static Command build(String name, String argString) {
+        return build(null, name, argString);
+    }
+
+    public static Command build(ShellContext context, String name, String argString) {
         Command command = new Command();
         command.name = name;
         command.argString = argString;
-        command.workspace = currentWorkspace;
+        command.context = context;
+        if (context != null && context.getWorkspace() != null && !context.getWorkspace().isBlank()) {
+            command.workspace = context.getWorkspace();
+        } else {
+            command.workspace = System.getProperty("user.dir");
+        }
 
         if (name == null) {
             return command;
         }
 
-        String execPath = findExecutable(name);
+        String execPath = findExecutable(context, name);
         if (execPath != null) {
             command.path = execPath;
             command.runable = true;
@@ -69,7 +82,7 @@ public class Command {
         return command;
     }
 
-    public static Map<String, CCRunnable> getBuiltinMap() {
+    public static Map<String, CCRunable> getBuiltinMap() {
         return BUILTIN_MAP;
     }
 
@@ -78,6 +91,10 @@ public class Command {
     }
 
     public static String findExecutable(String name) {
+        return findExecutable(null, name);
+    }
+
+    public static String findExecutable(ShellContext context, String name) {
         if (name == null || name.isBlank()) {
             return null;
         }
@@ -87,7 +104,7 @@ public class Command {
             return direct.getAbsolutePath();
         }
 
-        String pathEnv = System.getenv("PATH");
+        String pathEnv = context != null ? context.getEnv("PATH") : System.getenv("PATH");
         if (pathEnv == null || pathEnv.isBlank()) {
             return null;
         }
@@ -149,21 +166,25 @@ public class Command {
     }
 
     public String getWorkspace() {
-        return workspace;
+        if (workspace != null && !workspace.isBlank()) {
+            return workspace;
+        }
+        if (context != null) {
+            return context.getWorkspace();
+        }
+        return System.getProperty("user.dir");
     }
 
     public void setWorkspace(String workspace) {
         this.workspace = workspace;
     }
 
-    public static String getCurrentWorkspace() {
-        return currentWorkspace;
+    public ShellContext getContext() {
+        return context;
     }
 
-    public static void setCurrentWorkspace(String workspace) {
-        if (workspace != null && !workspace.isBlank()) {
-            currentWorkspace = workspace;
-        }
+    public void setContext(ShellContext context) {
+        this.context = context;
     }
 
     @Override

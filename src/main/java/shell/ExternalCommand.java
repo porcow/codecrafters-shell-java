@@ -1,3 +1,5 @@
+package shell;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -5,7 +7,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ExternalCommand implements CCRunnable {
+public class ExternalCommand implements CCRunable {
     private static final ExternalCommand INSTANCE = new ExternalCommand();
 
     private ExternalCommand() {

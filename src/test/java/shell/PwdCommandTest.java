@@ -1,3 +1,5 @@
+package shell;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.nio.file.Files;
@@ -9,9 +11,10 @@ public class PwdCommandTest {
     @Test
     void run_printsCurrentWorkspace() throws Exception {
         Path tempDir = Files.createTempDirectory("pwd-test");
-        Command.setCurrentWorkspace(tempDir.toAbsolutePath().toString());
+        ShellContext context = new ShellContext(tempDir.toAbsolutePath().toString());
 
-        String output = TestUtils.captureStdout(() -> PwdCommand.getInstance().run(Command.build("pwd", "")));
+        String output = TestUtils.captureStdout(() ->
+                PwdCommand.getInstance().run(Command.build(context, "pwd", "")));
 
         assertEquals(tempDir.toAbsolutePath().toString() + System.lineSeparator(), output);
     }

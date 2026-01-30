@@ -1,3 +1,5 @@
+package shell;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.nio.file.Files;
@@ -9,6 +11,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class QuotedExecutableTest {
+
+    private ShellContext context;
+    private Shell shell;
     private Path testDir;
 
     @BeforeEach
@@ -16,7 +21,8 @@ public class QuotedExecutableTest {
         Path base = Path.of(System.getProperty("user.dir"), "target");
         Files.createDirectories(base);
         testDir = Files.createTempDirectory(base, "quoted-exec-");
-        Command.setCurrentWorkspace(testDir.toAbsolutePath().toString());
+        context = new ShellContext(testDir.toAbsolutePath().toString());
+        shell = new Shell(context);
     }
 
     @Test
@@ -29,7 +35,8 @@ public class QuotedExecutableTest {
         Files.writeString(input, content);
 
         String commandLine = "'" + exec + "' " + input;
-        String output = TestUtils.captureStdout(() -> Main.eval(CCParser.parseLine(commandLine)));
+        String output = TestUtils.captureStdout(() ->
+                shell.eval(CCParser.parseLine(context, commandLine)));
 
         assertEquals(content, output);
     }
@@ -44,7 +51,8 @@ public class QuotedExecutableTest {
         Files.writeString(input, content);
 
         String commandLine = "\"" + exec + "\" " + input;
-        String output = TestUtils.captureStdout(() -> Main.eval(CCParser.parseLine(commandLine)));
+        String output = TestUtils.captureStdout(() ->
+                shell.eval(CCParser.parseLine(context, commandLine)));
 
         assertEquals(content, output);
     }

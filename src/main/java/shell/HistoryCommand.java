@@ -1,3 +1,5 @@
+package shell;
+
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.BufferedWriter;
@@ -10,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
-public class HistoryCommand implements CCRunnable {
+public class HistoryCommand implements CCRunable {
     private static final List<String> HISTORY = new ArrayList<>();
     private static String historyFilePath;
     private static int lastAppendIndex = 0;
@@ -58,13 +60,8 @@ public class HistoryCommand implements CCRunnable {
     }
 
     @Override
-    public void run(Command cmd) {
-        runWithStreams(cmd, System.in, System.out, System.err);
-    }
-
-    @Override
     public void runWithStreams(Command cmd, InputStream in, OutputStream out, OutputStream err) {
-        PrintStream stdout = CCRunnable.toPrintStream(out);
+        PrintStream stdout = CCRunable.toPrintStream(out);
         List<String> args = cmd.getArgList();
         if (args != null && !args.isEmpty()) {
             String option = args.get(0);

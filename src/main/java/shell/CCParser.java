@@ -1,3 +1,5 @@
+package shell;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -6,7 +8,11 @@ public final class CCParser {
     }
 
     public static Command parse(String inputString) {
-        return parseTokens(tokenize(inputString));
+        return parse(null, inputString);
+    }
+
+    public static Command parse(ShellContext context, String inputString) {
+        return parseTokens(context, tokenize(inputString));
     }
 
     public static List<String> parseArguments(String inputString) {
@@ -14,8 +20,12 @@ public final class CCParser {
     }
 
     public static ParsedLine parseLine(String inputString) {
+        return parseLine(null, inputString);
+    }
+
+    public static ParsedLine parseLine(ShellContext context, String inputString) {
         SplitResult split = splitRedirection(inputString);
-        Command command = parse(split.left);
+        Command command = parse(context, split.left);
         return new ParsedLine(command, split.right, split.type);
     }
 
@@ -225,13 +235,19 @@ public final class CCParser {
         return tokens;
     }
 
-    static Command parseTokens(List<String> tokens) {
+    static Command parseTokens(ShellContext context, List<String> tokens) {
         String commandName = tokens.isEmpty() ? null : tokens.get(0);
         List<String> argList = tokens.size() > 1
                 ? new ArrayList<>(tokens.subList(1, tokens.size()))
                 : new ArrayList<>();
 
-        String home = System.getenv("HOME");
+        String home = null;
+        if (context != null) {
+            home = context.getEnv("HOME");
+        }
+        if (home == null || home.isBlank()) {
+            home = System.getenv("HOME");
+        }
         if (home != null && !home.isBlank()) {
             for (int i = 0; i < argList.size(); i++) {
                 String arg = argList.get(i);
@@ -243,7 +259,7 @@ public final class CCParser {
 
         String commandArgs = String.join(" ", argList);
 
-        Command command = Command.build(commandName, commandArgs);
+        Command command = Command.build(context, commandName, commandArgs);
         command.setArgList(argList);
         return command;
     }

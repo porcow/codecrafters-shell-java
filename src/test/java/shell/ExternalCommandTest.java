@@ -1,3 +1,5 @@
+package shell;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -19,16 +21,17 @@ import org.junit.jupiter.api.io.TempDir;
 public class ExternalCommandTest {
     @TempDir
     Path tempDir;
+    private ShellContext context;
 
     @BeforeEach
     void resetWorkspace() {
-        Command.setCurrentWorkspace(tempDir.toAbsolutePath().toString());
+        context = new ShellContext(tempDir.toAbsolutePath().toString());
     }
 
     @Test
     void run_printsStderrWhenOnlyStderrOutput() {
         Assumptions.assumeTrue(Command.findExecutable("sh") != null);
-        Command command = Command.build("sh", "");
+        Command command = Command.build(context, "sh", "");
         command.setArgList(List.of("-c", "echo boom 1>&2"));
 
         AtomicReference<String> capturedErr = new AtomicReference<>();
@@ -43,7 +46,7 @@ public class ExternalCommandTest {
     @Test
     void run_allowsNonZeroExitCodes() {
         Assumptions.assumeTrue(Command.findExecutable("sh") != null);
-        Command command = Command.build("sh", "");
+        Command command = Command.build(context, "sh", "");
         command.setArgList(List.of("-c", "exit 7"));
 
         AtomicReference<String> capturedErr = new AtomicReference<>();
@@ -58,7 +61,7 @@ public class ExternalCommandTest {
     @Test
     void run_throwsWhenWorkingDirectoryIsInvalid() {
         Assumptions.assumeTrue(Command.findExecutable("sh") != null);
-        Command command = Command.build("sh", "");
+        Command command = Command.build(context, "sh", "");
         command.setArgList(List.of("-c", "echo ok"));
         command.setWorkspace(tempDir.resolve("missing").toString());
 
@@ -146,7 +149,8 @@ public class ExternalCommandTest {
     public static class EvalHarness {
         public static void main(String[] args) {
             String line = String.join(" ", args);
-            Main.eval(CCParser.parseLine(line));
+            Shell shell = new Shell();
+            shell.eval(CCParser.parseLine(shell.getContext(), line));
         }
     }
 }

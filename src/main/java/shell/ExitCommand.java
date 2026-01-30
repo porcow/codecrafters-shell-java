@@ -1,7 +1,9 @@
+package shell;
+
 import java.io.InputStream;
 import java.io.OutputStream;
 
-public class ExitCommand implements CCRunnable {
+public class ExitCommand implements CCRunable {
     private static ExitCommand instance;
 
     private ExitCommand() {
@@ -12,11 +14,6 @@ public class ExitCommand implements CCRunnable {
             instance = new ExitCommand();
         }
         return instance;
-    }
-
-    @Override
-    public void run(Command cmd) {
-        runWithStreams(cmd, System.in, System.out, System.err);
     }
 
     @Override
