@@ -8,6 +8,8 @@ public class ShellContext {
     private String workspace;
     private final List<String> history;
     private final Map<String, String> env;
+    private String historyFilePath;
+    private int lastAppendIndex;
 
     public ShellContext() {
         this(System.getProperty("user.dir"), new ArrayList<>(), System.getenv());
@@ -35,6 +37,22 @@ public class ShellContext {
 
     public List<String> getHistory() {
         return history;
+    }
+
+    public String getHistoryFilePath() {
+        return historyFilePath;
+    }
+
+    public void setHistoryFilePath(String historyFilePath) {
+        this.historyFilePath = historyFilePath;
+    }
+
+    public int getLastAppendIndex() {
+        return lastAppendIndex;
+    }
+
+    public void setLastAppendIndex(int lastAppendIndex) {
+        this.lastAppendIndex = lastAppendIndex;
     }
 
     public Map<String, String> getEnv() {

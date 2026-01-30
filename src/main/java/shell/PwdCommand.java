@@ -4,7 +4,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 
-public class PwdCommand implements CCRunable {
+public class PwdCommand implements CommandRunner {
     private static PwdCommand instance;
 
     private PwdCommand() {
@@ -19,7 +19,7 @@ public class PwdCommand implements CCRunable {
 
     @Override
     public void runWithStreams(Command cmd, InputStream in, OutputStream out, OutputStream err) {
-        PrintStream stdout = CCRunable.toPrintStream(out);
+        PrintStream stdout = CommandRunner.toPrintStream(out);
         ShellContext context = cmd.getContext();
         String workspace = context != null ? context.getWorkspace() : cmd.getWorkspace();
         if (workspace == null || workspace.isBlank()) {

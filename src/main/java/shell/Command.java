@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 public class Command {
-    private static final Map<String, CCRunable> BUILTIN_MAP = new HashMap<>() {{
+    private static final Map<String, CommandRunner> BUILTIN_MAP = new HashMap<>() {{
         put("echo", EchoCommand.getInstance());
         put("exit", ExitCommand.getInstance());
         put("type", TypeCommand.getInstance());
@@ -82,7 +82,7 @@ public class Command {
         return command;
     }
 
-    public static Map<String, CCRunable> getBuiltinMap() {
+    public static Map<String, CommandRunner> getBuiltinMap() {
         return BUILTIN_MAP;
     }
 

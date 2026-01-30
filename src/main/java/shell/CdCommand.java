@@ -7,7 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-public class CdCommand implements CCRunable {
+public class CdCommand implements CommandRunner {
     private static CdCommand instance;
 
     private CdCommand() {
@@ -22,7 +22,7 @@ public class CdCommand implements CCRunable {
 
     @Override
     public void runWithStreams(Command cmd, InputStream in, OutputStream out, OutputStream err) {
-        PrintStream stdout = CCRunable.toPrintStream(out);
+        PrintStream stdout = CommandRunner.toPrintStream(out);
         List<String> args = cmd.getArgList();
         ShellContext context = cmd.getContext();
         String target = "";

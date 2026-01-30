@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
-public class HistoryCommand implements CCRunable {
+public class HistoryCommand implements CommandRunner {
     private static final List<String> HISTORY = new ArrayList<>();
     private static String historyFilePath;
     private static int lastAppendIndex = 0;
@@ -61,7 +61,7 @@ public class HistoryCommand implements CCRunable {
 
     @Override
     public void runWithStreams(Command cmd, InputStream in, OutputStream out, OutputStream err) {
-        PrintStream stdout = CCRunable.toPrintStream(out);
+        PrintStream stdout = CommandRunner.toPrintStream(out);
         List<String> args = cmd.getArgList();
         if (args != null && !args.isEmpty()) {
             String option = args.get(0);

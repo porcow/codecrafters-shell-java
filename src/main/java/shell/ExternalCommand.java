@@ -6,7 +6,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
 
-public class ExternalCommand implements CCRunable {
+public class ExternalCommand implements CommandRunner {
     private static final ExternalCommand INSTANCE = new ExternalCommand();
 
     private ExternalCommand() {

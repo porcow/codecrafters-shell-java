@@ -7,13 +7,13 @@ import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.Test;
 
-public class CCRunableTest {
+public class CommandRunnerTest {
     @Test
     void stdout_streamsOutput() throws Exception {
-        CCRunable runner = new CCRunable() {
+        CommandRunner runner = new CommandRunner() {
             @Override
             public void runWithStreams(Command cmd, InputStream in, java.io.OutputStream out, java.io.OutputStream err) {
-                CCRunable.toPrintStream(out).print("hello world");
+                CommandRunner.toPrintStream(out).print("hello world");
             }
         };
         Command source = Command.build("echo", "");
@@ -28,10 +28,10 @@ public class CCRunableTest {
 
     @Test
     void stderr_streamsOutput() throws Exception {
-        CCRunable runner = new CCRunable() {
+        CommandRunner runner = new CommandRunner() {
             @Override
             public void runWithStreams(Command cmd, InputStream in, java.io.OutputStream out, java.io.OutputStream err) {
-                CCRunable.toPrintStream(err).print("boom");
+                CommandRunner.toPrintStream(err).print("boom");
             }
         };
         Command source = Command.build("echo", "");

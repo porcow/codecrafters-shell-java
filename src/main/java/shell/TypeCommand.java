@@ -5,7 +5,7 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.List;
 
-public class TypeCommand implements CCRunable {
+public class TypeCommand implements CommandRunner {
     private static TypeCommand instance;
 
     private TypeCommand() {
@@ -20,7 +20,7 @@ public class TypeCommand implements CCRunable {
 
     @Override
     public void runWithStreams(Command cmd, InputStream in, OutputStream out, OutputStream err) {
-        PrintStream stdout = CCRunable.toPrintStream(out);
+        PrintStream stdout = CommandRunner.toPrintStream(out);
         List<String> args = cmd.getArgList();
         if (args == null || args.isEmpty()) {
             return;

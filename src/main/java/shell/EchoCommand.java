@@ -4,7 +4,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 
-public class EchoCommand implements CCRunable {
+public class EchoCommand implements CommandRunner {
     private static EchoCommand instance;
 
     private EchoCommand() {
@@ -19,7 +19,7 @@ public class EchoCommand implements CCRunable {
 
     @Override
     public void runWithStreams(Command cmd, InputStream in, OutputStream out, OutputStream err) {
-        PrintStream stdout = CCRunable.toPrintStream(out);
+        PrintStream stdout = CommandRunner.toPrintStream(out);
         if (cmd.getArgList() == null) {
             stdout.println();
             return;

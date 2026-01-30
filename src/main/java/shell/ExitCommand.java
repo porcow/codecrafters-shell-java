@@ -3,7 +3,7 @@ package shell;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-public class ExitCommand implements CCRunable {
+public class ExitCommand implements CommandRunner {
     private static ExitCommand instance;
 
     private ExitCommand() {
