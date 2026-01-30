@@ -30,7 +30,7 @@ public class Shell {
         if (inputString != null && !inputString.isBlank()) {
             HistoryCommand.record(inputString.trim());
         }
-        List<String> pipelineParts = CCParser.splitPipeline(inputString);
+        List<List<String>> pipelineParts = CCParser.splitPipelineTokens(inputString);
         if (pipelineParts.size() > 1) {
             evalPipeline(pipelineParts);
             return;
@@ -44,18 +44,14 @@ public class Shell {
             return;
         }
 
-        if (parsed.redirectPart() == null || parsed.redirectPart().isBlank()) {
+        if (parsed.redirectTokens() == null || parsed.redirectTokens().isEmpty()) {
             runCommand(parsed.command());
             return;
         }
 
-        List<String> redirectTokens = CCParser.parseArguments(parsed.redirectPart());
-        if (redirectTokens.isEmpty()) {
-            runCommand(parsed.command());
-            return;
-        }
+        List<String> redirectTokens = parsed.redirectTokens();
 
-        CCRunable runner = resolveRunner(parsed.command());
+        CommandRunner runner = resolveRunner(parsed.command());
         if (runner == null) {
             System.out.println(parsed.command().getName() + ": command not found");
             return;
@@ -78,19 +74,19 @@ public class Shell {
         }
     }
 
-    public void evalPipeline(List<String> parts) {
+    public void evalPipeline(List<List<String>> parts) {
         if (parts == null || parts.isEmpty()) {
             return;
         }
 
         List<Command> commands = new ArrayList<>();
-        List<CCRunable> runners = new ArrayList<>();
-        for (String part : parts) {
-            if (part == null || part.isBlank()) {
+        List<CommandRunner> runners = new ArrayList<>();
+        for (List<String> part : parts) {
+            if (part == null || part.isEmpty()) {
                 return;
             }
-            Command command = CCParser.parseTokens(context, CCParser.parseArguments(part));
-            CCRunable runner = resolveRunner(command);
+            Command command = CCParser.parseTokens(context, part);
+            CommandRunner runner = resolveRunner(command);
             if (runner == null) {
                 System.out.println(command.getName() + ": command not found");
                 return;
@@ -116,7 +112,7 @@ public class Shell {
         InputStream nextInput = System.in;
         for (int i = 0; i < commands.size(); i++) {
             Command command = commands.get(i);
-            CCRunable runner = runners.get(i);
+            CommandRunner runner = runners.get(i);
             InputStream input = nextInput;
             OutputStream output = System.out;
             if (i < commands.size() - 1) {
@@ -264,7 +260,7 @@ public class Shell {
     }
 
     public void runCommand(Command command) {
-        CCRunable runner = resolveRunner(command);
+        CommandRunner runner = resolveRunner(command);
         if (runner == null) {
             System.out.println(command.getName() + ": command not found");
             return;
@@ -276,7 +272,7 @@ public class Shell {
         }
     }
 
-    private CCRunable resolveRunner(Command command) {
+    private CommandRunner resolveRunner(Command command) {
         if (command == null || command.getName() == null || command.getName().isBlank()) {
             return null;
         }

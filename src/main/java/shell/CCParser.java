@@ -12,11 +12,11 @@ public final class CCParser {
     }
 
     public static Command parse(ShellContext context, String inputString) {
-        return parseTokens(context, tokenize(inputString));
+        return parseTokens(context, extractWords(tokenizeWithOperators(inputString)));
     }
 
     public static List<String> parseArguments(String inputString) {
-        return tokenize(inputString);
+        return extractWords(tokenizeWithOperators(inputString));
     }
 
     public static ParsedLine parseLine(String inputString) {
@@ -24,215 +24,64 @@ public final class CCParser {
     }
 
     public static ParsedLine parseLine(ShellContext context, String inputString) {
-        SplitResult split = splitRedirection(inputString);
-        Command command = parse(context, split.left);
-        return new ParsedLine(command, split.right, split.type);
+        List<Token> tokens = tokenizeWithOperators(inputString);
+        RedirectType redirectType = null;
+        List<String> commandTokens = new ArrayList<>();
+        List<String> redirectTokens = null;
+        boolean afterRedirect = false;
+
+        for (Token token : tokens) {
+            if (!afterRedirect && isRedirect(token.type)) {
+                redirectType = toRedirectType(token.type);
+                afterRedirect = true;
+                redirectTokens = new ArrayList<>();
+                continue;
+            }
+
+            if (token.type == TokenType.PIPE) {
+                if (afterRedirect) {
+                    break;
+                }
+                continue;
+            }
+
+            if (token.type == TokenType.WORD) {
+                if (afterRedirect) {
+                    redirectTokens.add(token.text);
+                } else {
+                    commandTokens.add(token.text);
+                }
+            }
+        }
+
+        Command command = parseTokens(context, commandTokens);
+        if (redirectType == null) {
+            return new ParsedLine(command, null, null);
+        }
+        return new ParsedLine(command, redirectTokens, redirectType);
     }
 
-    public static List<String> splitPipeline(String inputString) {
-        List<String> parts = new ArrayList<>();
+    public static List<List<String>> splitPipelineTokens(String inputString) {
+        List<List<String>> parts = new ArrayList<>();
         if (inputString == null || inputString.isEmpty()) {
-            parts.add(inputString);
+            parts.add(new ArrayList<>());
             return parts;
         }
 
-        StringBuilder current = new StringBuilder();
-        boolean inSingleQuotes = false;
-        boolean inDoubleQuotes = false;
-
-        for (int i = 0; i < inputString.length(); i++) {
-            char ch = inputString.charAt(i);
-
-            if (!inSingleQuotes && !inDoubleQuotes && ch == '\\') {
-                if (i + 1 < inputString.length()) {
-                    current.append(ch);
-                    current.append(inputString.charAt(i + 1));
-                    i++;
-                } else {
-                    current.append(ch);
-                }
+        List<Token> tokens = tokenizeWithOperators(inputString);
+        List<String> current = new ArrayList<>();
+        for (Token token : tokens) {
+            if (token.type == TokenType.PIPE) {
+                parts.add(current);
+                current = new ArrayList<>();
                 continue;
             }
-
-            if (inDoubleQuotes && ch == '\\') {
-                if (i + 1 < inputString.length()) {
-                    char next = inputString.charAt(i + 1);
-                    if (next == '"' || next == '\\') {
-                        current.append(ch);
-                        current.append(next);
-                        i++;
-                        continue;
-                    }
-                }
-                current.append(ch);
-                continue;
+            if (token.type == TokenType.WORD) {
+                current.add(token.text);
             }
-
-            if (ch == '\'' && !inDoubleQuotes) {
-                inSingleQuotes = !inSingleQuotes;
-                current.append(ch);
-                continue;
-            }
-
-            if (ch == '"' && !inSingleQuotes) {
-                inDoubleQuotes = !inDoubleQuotes;
-                current.append(ch);
-                continue;
-            }
-
-            if (!inSingleQuotes && !inDoubleQuotes && ch == '|') {
-                parts.add(current.toString().trim());
-                current.setLength(0);
-                continue;
-            }
-
-            current.append(ch);
         }
-
-        parts.add(current.toString().trim());
+        parts.add(current);
         return parts;
-    }
-
-    private static SplitResult splitRedirection(String inputString) {
-        boolean inSingleQuotes = false;
-        boolean inDoubleQuotes = false;
-
-        for (int i = 0; i < inputString.length(); i++) {
-            char ch = inputString.charAt(i);
-
-            // Only split on >, 1>, 2>, >>, 1>>, or 2>> when we're not inside quotes or escapes.
-            if (!inSingleQuotes && !inDoubleQuotes && ch == '\\') {
-                if (i + 1 < inputString.length()) {
-                    i++;
-                }
-                continue;
-            }
-
-            if (inDoubleQuotes && ch == '\\') {
-                if (i + 1 < inputString.length()) {
-                    char next = inputString.charAt(i + 1);
-                    if (next == '"' || next == '\\') {
-                        i++;
-                    }
-                }
-                continue;
-            }
-
-            if (ch == '\'' && !inDoubleQuotes) {
-                inSingleQuotes = !inSingleQuotes;
-                continue;
-            }
-
-            if (ch == '"' && !inSingleQuotes) {
-                inDoubleQuotes = !inDoubleQuotes;
-                continue;
-            }
-
-            if (!inSingleQuotes && !inDoubleQuotes) {
-                if (ch == '2' && i + 1 < inputString.length() && inputString.charAt(i + 1) == '>') {
-                    if (i + 2 < inputString.length() && inputString.charAt(i + 2) == '>') {
-                        return new SplitResult(inputString.substring(0, i),
-                                               inputString.substring(i + 3),
-                                               RedirectType.STDERR_APPEND);
-                    }
-                    return new SplitResult(inputString.substring(0, i),
-                                           inputString.substring(i + 2),
-                                           RedirectType.STDERR);
-                }
-                if (ch == '1' && i + 1 < inputString.length() && inputString.charAt(i + 1) == '>') {
-                    if (i + 2 < inputString.length() && inputString.charAt(i + 2) == '>') {
-                        return new SplitResult(inputString.substring(0, i),
-                                               inputString.substring(i + 3),
-                                               RedirectType.STDOUT_APPEND);
-                    }
-                    return new SplitResult(inputString.substring(0, i),
-                                           inputString.substring(i + 2),
-                                           RedirectType.STDOUT);
-                }
-                if (ch == '>') {
-                    if (i + 1 < inputString.length() && inputString.charAt(i + 1) == '>') {
-                        return new SplitResult(inputString.substring(0, i),
-                                               inputString.substring(i + 2),
-                                               RedirectType.STDOUT_APPEND);
-                    }
-                    return new SplitResult(inputString.substring(0, i),
-                                           inputString.substring(i + 1),
-                                           RedirectType.STDOUT);
-                }
-            }
-        }
-
-        return new SplitResult(inputString, null, null);
-    }
-
-    private static List<String> tokenize(String inputString) {
-        List<String> tokens = new ArrayList<>();
-        StringBuilder current = new StringBuilder();
-        boolean inSingleQuotes = false;
-        boolean inDoubleQuotes = false;
-        boolean tokenStarted = false;
-
-        for (int i = 0; i < inputString.length(); i++) {
-            char ch = inputString.charAt(i);
-
-            // Outside quotes, backslash escapes the next character (including whitespace and quotes).
-            if (!inSingleQuotes && !inDoubleQuotes && ch == '\\') {
-                if (i + 1 < inputString.length()) {
-                    current.append(inputString.charAt(i + 1));
-                    tokenStarted = true;
-                    i++;
-                } else {
-                    current.append(ch);
-                    tokenStarted = true;
-                }
-                continue;
-            }
-
-            if (inDoubleQuotes && ch == '\\') {
-                if (i + 1 < inputString.length()) {
-                    char next = inputString.charAt(i + 1);
-                    if (next == '"' || next == '\\') {
-                        current.append(next);
-                        tokenStarted = true;
-                        i++;
-                        continue;
-                    }
-                }
-                current.append(ch);
-                tokenStarted = true;
-                continue;
-            }
-
-            if (ch == '\'' && !inDoubleQuotes) {
-                inSingleQuotes = !inSingleQuotes;
-                tokenStarted = true;
-                continue;
-            }
-
-            if (ch == '"' && !inSingleQuotes) {
-                inDoubleQuotes = !inDoubleQuotes;
-                tokenStarted = true;
-                continue;
-            }
-
-            if (!inSingleQuotes && !inDoubleQuotes && Character.isWhitespace(ch)) {
-                if (tokenStarted) {
-                    tokens.add(current.toString());
-                    current.setLength(0);
-                    tokenStarted = false;
-                }
-                continue;
-            }
-
-            current.append(ch);
-            tokenStarted = true;
-        }
-
-        if (tokenStarted) {
-            tokens.add(current.toString());
-        }
-
-        return tokens;
     }
 
     static Command parseTokens(ShellContext context, List<String> tokens) {
@@ -264,14 +113,173 @@ public final class CCParser {
         return command;
     }
 
-    public record ParsedLine(Command command, String redirectPart, RedirectType redirectType) {}
-
-    private record SplitResult(String left, String right, RedirectType type) {}
+    public record ParsedLine(Command command, List<String> redirectTokens, RedirectType redirectType) {}
 
     public enum RedirectType {
         STDOUT,
         STDERR,
         STDOUT_APPEND,
         STDERR_APPEND
+    }
+
+    private enum TokenType {
+        WORD,
+        PIPE,
+        REDIRECT_STDOUT,
+        REDIRECT_STDOUT_APPEND,
+        REDIRECT_STDERR,
+        REDIRECT_STDERR_APPEND
+    }
+
+    private record Token(TokenType type, String text) {}
+
+    private static boolean isRedirect(TokenType type) {
+        return type == TokenType.REDIRECT_STDOUT
+                || type == TokenType.REDIRECT_STDOUT_APPEND
+                || type == TokenType.REDIRECT_STDERR
+                || type == TokenType.REDIRECT_STDERR_APPEND;
+    }
+
+    private static RedirectType toRedirectType(TokenType type) {
+        return switch (type) {
+            case REDIRECT_STDOUT -> RedirectType.STDOUT;
+            case REDIRECT_STDOUT_APPEND -> RedirectType.STDOUT_APPEND;
+            case REDIRECT_STDERR -> RedirectType.STDERR;
+            case REDIRECT_STDERR_APPEND -> RedirectType.STDERR_APPEND;
+            default -> null;
+        };
+    }
+
+    private static List<String> extractWords(List<Token> tokens) {
+        List<String> words = new ArrayList<>();
+        for (Token token : tokens) {
+            if (token.type == TokenType.WORD) {
+                words.add(token.text);
+            }
+        }
+        return words;
+    }
+
+    private static List<Token> tokenizeWithOperators(String inputString) {
+        List<Token> tokens = new ArrayList<>();
+        if (inputString == null || inputString.isEmpty()) {
+            return tokens;
+        }
+
+        StringBuilder current = new StringBuilder();
+        boolean inSingleQuotes = false;
+        boolean inDoubleQuotes = false;
+        boolean tokenStarted = false;
+
+        for (int i = 0; i < inputString.length(); i++) {
+            char ch = inputString.charAt(i);
+
+            if (!inSingleQuotes && !inDoubleQuotes) {
+                if (ch == '\\') {
+                    if (i + 1 < inputString.length()) {
+                        current.append(inputString.charAt(i + 1));
+                        tokenStarted = true;
+                        i++;
+                    } else {
+                        current.append(ch);
+                        tokenStarted = true;
+                    }
+                    continue;
+                }
+
+                if (ch == '|') {
+                    if (tokenStarted) {
+                        tokens.add(new Token(TokenType.WORD, current.toString()));
+                        current.setLength(0);
+                        tokenStarted = false;
+                    }
+                    tokens.add(new Token(TokenType.PIPE, null));
+                    continue;
+                }
+
+                if ((ch == '1' || ch == '2')
+                        && i + 1 < inputString.length()
+                        && inputString.charAt(i + 1) == '>') {
+                    if (tokenStarted) {
+                        tokens.add(new Token(TokenType.WORD, current.toString()));
+                        current.setLength(0);
+                        tokenStarted = false;
+                    }
+                    boolean append = i + 2 < inputString.length() && inputString.charAt(i + 2) == '>';
+                    if (ch == '1') {
+                        tokens.add(new Token(append
+                                ? TokenType.REDIRECT_STDOUT_APPEND
+                                : TokenType.REDIRECT_STDOUT, null));
+                    } else {
+                        tokens.add(new Token(append
+                                ? TokenType.REDIRECT_STDERR_APPEND
+                                : TokenType.REDIRECT_STDERR, null));
+                    }
+                    i += append ? 2 : 1;
+                    continue;
+                }
+
+                if (ch == '>') {
+                    if (tokenStarted) {
+                        tokens.add(new Token(TokenType.WORD, current.toString()));
+                        current.setLength(0);
+                        tokenStarted = false;
+                    }
+                    boolean append = i + 1 < inputString.length() && inputString.charAt(i + 1) == '>';
+                    tokens.add(new Token(append
+                            ? TokenType.REDIRECT_STDOUT_APPEND
+                            : TokenType.REDIRECT_STDOUT, null));
+                    if (append) {
+                        i++;
+                    }
+                    continue;
+                }
+            }
+
+            if (inDoubleQuotes && ch == '\\') {
+                if (i + 1 < inputString.length()) {
+                    char next = inputString.charAt(i + 1);
+                    if (next == '"' || next == '\\') {
+                        current.append(next);
+                        tokenStarted = true;
+                        i++;
+                        continue;
+                    }
+                }
+                current.append(ch);
+                tokenStarted = true;
+                continue;
+            }
+
+            if (ch == '\'' && !inDoubleQuotes) {
+                inSingleQuotes = !inSingleQuotes;
+                tokenStarted = true;
+                continue;
+            }
+
+            if (ch == '"' && !inSingleQuotes) {
+                inDoubleQuotes = !inDoubleQuotes;
+                tokenStarted = true;
+                continue;
+            }
+
+            if (!inSingleQuotes && !inDoubleQuotes && Character.isWhitespace(ch)) {
+                if (tokenStarted) {
+                    tokens.add(new Token(TokenType.WORD, current.toString()));
+                    current.setLength(0);
+                    tokenStarted = false;
+                }
+                continue;
+            }
+
+            current.append(ch);
+            tokenStarted = true;
+        }
+
+        if (tokenStarted) {
+            tokens.add(new Token(TokenType.WORD, current.toString()));
+        }
+
+        return tokens;
     }
 }
