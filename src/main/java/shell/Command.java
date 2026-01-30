@@ -165,6 +165,21 @@ public class Command {
         this.argList = argList;
     }
 
+    public List<String> toCommandLine() {
+        List<String> commandLine = new ArrayList<>();
+        String execName = name;
+        String execPath = path;
+        if (execName == null || execName.isBlank()) {
+            commandLine.add(execPath);
+        } else {
+            commandLine.add(execName);
+        }
+        if (argList != null && !argList.isEmpty()) {
+            commandLine.addAll(argList);
+        }
+        return commandLine;
+    }
+
     public String getWorkspace() {
         if (workspace != null && !workspace.isBlank()) {
             return workspace;

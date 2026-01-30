@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.ArrayList;
 import java.util.List;
 
 public class ExternalCommand implements CCRunable {
@@ -24,20 +23,7 @@ public class ExternalCommand implements CCRunable {
 
     @Override
     public void runWithStreams(Command cmd, InputStream in, OutputStream out, OutputStream err) {
-        List<String> commandLine = new ArrayList<>();
-        String execPath = cmd.getPath();
-        String execName = cmd.getName();
-
-        if (execName == null || execName.isBlank()) {
-            commandLine.add(execPath);
-        } else {
-            commandLine.add(execName);
-        }
-
-        List<String> args = cmd.getArgList();
-        if (args != null && !args.isEmpty()) {
-            commandLine.addAll(args);
-        }
+        List<String> commandLine = cmd.toCommandLine();
 
         Process process;
         boolean inheritInput = in == System.in;

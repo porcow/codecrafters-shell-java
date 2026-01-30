@@ -184,18 +184,7 @@ public class Shell {
         List<ProcessBuilder> builders = new ArrayList<>();
         for (int i = 0; i < commands.size(); i++) {
             Command command = commands.get(i);
-            List<String> commandLine = new ArrayList<>();
-            String execName = command.getName();
-            String execPath = command.getPath();
-            if (execName == null || execName.isBlank()) {
-                commandLine.add(execPath);
-            } else {
-                commandLine.add(execName);
-            }
-            List<String> args = command.getArgList();
-            if (args != null && !args.isEmpty()) {
-                commandLine.addAll(args);
-            }
+            List<String> commandLine = command.toCommandLine();
 
             String workspace = command.getWorkspace();
             if (workspace == null || workspace.isBlank()) {
