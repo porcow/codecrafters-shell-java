@@ -27,7 +27,7 @@ public class TypeCommand implements CommandRunner {
         }
 
         for (String arg : args) {
-            Command typeCommand = Command.build(arg, "");
+            Command typeCommand = Command.build(cmd.getContext(), arg, "");
             if (typeCommand.isBuiltin()) {
                 stdout.println(arg + " is a shell builtin");
             } else if (typeCommand.isRunable() && typeCommand.getPath() != null) {

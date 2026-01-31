@@ -1,0 +1,42 @@
+In this stage, you'll add support for recalling history with the down
+arrow key.
+
+*** Tests
+:PROPERTIES:
+:CUSTOM_ID: tests
+:END:
+The tester will execute your program like this:
+
+#+begin_src sh
+./your_program.sh
+#+end_src
+
+It will then send multiple commands to your shell, followed by the up
+and then down arrow keys to recall the history:
+
+#+begin_src sh
+$ echo hello
+hello
+$ echo world
+world
+<UP ARROW>
+$ echo world
+<UP ARROW>
+$ echo hello
+<DOWN ARROW>
+$ echo world
+#+end_src
+
+The tester will expect the previous commands to be displayed when the
+down arrow key is pressed.
+
+*** Notes
+:PROPERTIES:
+:CUSTOM_ID: notes
+:END:
+- We recommend using a library like
+  [[https://en.wikipedia.org/wiki/GNU_Readline][readline]] for your
+  implementation. Most modern shells and REPLs (like the Python REPL)
+  use readline under the hood. While you may need to override some of
+  its default behaviors, it's typically less work than starting from
+  scratch.

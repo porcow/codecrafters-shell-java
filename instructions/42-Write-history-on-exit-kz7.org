@@ -1,0 +1,31 @@
+In this stage, you'll add support for writing the in-memory history to
+the history file when exiting.
+
+*** Tests
+:PROPERTIES:
+:CUSTOM_ID: tests
+:END:
+The tester will execute your program like this:
+
+#+begin_src sh
+HISTFILE=<path_to_history_file> ./your_program.sh
+#+end_src
+
+It will then send the following commands to your shell:
+
+#+begin_src sh
+$ echo hello
+hello
+$ echo world
+world
+$ exit
+#+end_src
+
+The tester will then expect the history file's contents to look like:
+
+#+begin_src txt
+echo hello
+echo world
+exit
+<|EMPTY LINE|>
+#+end_src

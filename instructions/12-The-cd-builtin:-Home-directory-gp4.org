@@ -1,0 +1,77 @@
+In this stage, you'll extend your =cd= builtin to handle the =~=
+character.
+
+*** The =cd= Builtin (Recap)
+:PROPERTIES:
+:CUSTOM_ID: the-cd-builtin-recap
+:END:
+As a recap, =cd= can receive multiple argument types:
+
+- Absolute paths, like =/usr/local/bin=. (Handled in earlier stages)
+- Relative paths, like =./=, =../=, =./dir=. (Handled in previous
+  stages)
+- The =~= character.
+
+*** The =~= Character
+:PROPERTIES:
+:CUSTOM_ID: the-character
+:END:
+The =~= (tilde) character is shorthand for the user's home directory.
+It's a convenient way to quickly navigate back to your home directory
+from anywhere in the filesystem.
+
+The home directory is specified by the
+[[https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap08.html#tag_08_03][=HOME=]]
+environment variable. When your shell sees =cd ~=, it should:
+
+1. Read the value of the =HOME= environment variable
+2. Change to that directory
+
+For example:
+
+#+begin_src sh
+$ pwd
+/usr/local/bin
+$ cd ~
+$ pwd
+/home/user
+$ cd /var/log
+$ pwd
+/var/log
+$ cd ~
+$ pwd
+/home/user
+#+end_src
+
+*** Tests
+:PROPERTIES:
+:CUSTOM_ID: tests
+:END:
+The tester will execute your program like this:
+
+#+begin_src sh
+./your_program.sh
+#+end_src
+
+It will then send a series of =cd= commands to your shell:
+
+#+begin_src sh
+$ cd /usr/local/bin
+$ pwd
+/usr/local/bin
+$ cd ~
+$ pwd
+/home/user
+$
+#+end_src
+
+The tester will verify that: - =cd ~= changes to the home directory. -
+The home directory matches the value of the =HOME= environment variable.
+
+*** Notes
+:PROPERTIES:
+:CUSTOM_ID: notes
+:END:
+- Most languages provide functions to read environment variables (like
+  =process.env.HOME= in Node.js, =os.getenv('HOME')= in Python, or
+  =getenv("HOME")= in C).

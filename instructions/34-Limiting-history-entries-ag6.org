@@ -1,0 +1,38 @@
+In this stage, you'll add support for limiting history entries using the
+=history <n>= syntax.
+
+*** Tests
+:PROPERTIES:
+:CUSTOM_ID: tests
+:END:
+The tester will execute your program like this:
+
+#+begin_src sh
+./your_program.sh
+#+end_src
+
+It will then send multiple commands to your shell, followed by the
+=history <n>= command:
+
+#+begin_src sh
+$ echo hello
+hello
+$ echo world
+world
+$ invalid_command
+invalid_command: command not found
+$ history 2
+    3  invalid_command
+    4  history 2
+$
+#+end_src
+
+The tester expects the history list to be limited to the last =n=
+commands.
+
+*** Notes
+:PROPERTIES:
+:CUSTOM_ID: notes
+:END:
+- The tester expects the history command to be present in the history
+  list.

@@ -18,7 +18,7 @@ public class ExitCommand implements CommandRunner {
 
     @Override
     public void runWithStreams(Command cmd, InputStream in, OutputStream out, OutputStream err) {
-        HistoryCommand.writeOnExit();
+        HistoryCommand.writeOnExit(cmd.getContext());
         System.exit(0);
     }
 }

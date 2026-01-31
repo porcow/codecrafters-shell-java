@@ -1,0 +1,40 @@
+In this stage, you'll ensure that your shell loads history from the file
+into memory on startup.
+
+*** The =HISTFILE= environment variable
+:PROPERTIES:
+:CUSTOM_ID: the-histfile-environment-variable
+:END:
+The
+[[https://www.gnu.org/software///bash/manual/bash.html#index-HISTFILE][=HISTFILE= environment variable]]
+specifies the path to the history file. It is the path used to load
+history from the file into memory on startup and to save the in-memory
+history to the file when exiting.
+
+*** Tests
+:PROPERTIES:
+:CUSTOM_ID: tests
+:END:
+The tester will write the following commands to the history file:
+
+#+begin_src txt
+echo hello
+echo world
+<|EMPTY LINE|>
+#+end_src
+
+The tester will execute your program like this:
+
+#+begin_src sh
+HISTFILE=<path_to_history_file> ./your_program.sh
+#+end_src
+
+It will then send the following commands to your shell:
+
+#+begin_src sh
+$ history
+    1  echo hello
+    2  echo world
+    3 history
+$
+#+end_src

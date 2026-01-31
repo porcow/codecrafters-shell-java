@@ -1,0 +1,54 @@
+In this stage, you'll implement support for backslashes within single
+quotes.
+
+*** Backslashes in Single Quotes
+:PROPERTIES:
+:CUSTOM_ID: backslashes-in-single-quotes
+:END:
+Backslashes have no special escaping behavior inside
+[[https://www.gnu.org/software/bash/manual/bash.html#Single-Quotes][single quotes]].
+Every character (including backslashes) within single quotes is treated
+literally.
+
+For example:
+
+#+begin_src sh
+$ echo 'shell\\\nscript'
+shell\\\nscript
+
+$ echo 'example\"test'
+example\"test
+#+end_src
+
+*** Tests
+:PROPERTIES:
+:CUSTOM_ID: tests
+:END:
+The tester will execute your program like this:
+
+#+begin_src sh
+./your_program.sh
+#+end_src
+
+It will then send a series of =echo= commands to your shell:
+
+#+begin_src sh
+$ echo 'multiple\\slashes'
+multiple\\slashes
+$ echo 'every\"thing_is\"literal'
+every\"thing_is\"literal
+#+end_src
+
+The tester will check if the =echo= command correctly prints the quoted
+text.
+
+Next, the tester will send a =cat= command, with the file name
+parameters consisting of backslashes inside single quotes:
+
+#+begin_src sh
+$ cat /tmp/'no slash 1' /tmp/'one slash \2' /tmp/'two slashes \3\'
+content1 content2 content3
+#+end_src
+
+The tester will check whether the =cat= command correctly prints the
+file's contents.

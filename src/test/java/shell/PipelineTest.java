@@ -51,8 +51,8 @@ public class PipelineTest {
 
     @Test
     void eval_tailFollowPipesIntoHead(@TempDir Path tempDir) throws Exception {
-        String tailPath = Command.findExecutable("tail");
-        String headPath = Command.findExecutable("head");
+        String tailPath = CommandResolver.findExecutable("tail");
+        String headPath = CommandResolver.findExecutable("head");
         Assumptions.assumeTrue(tailPath != null && headPath != null);
 
         Path input = tempDir.resolve("lines.txt");

@@ -1,0 +1,42 @@
+* Build your own Shell
+:PROPERTIES:
+:CUSTOM_ID: build-your-own-shell
+:END:
+A shell is the program that interprets what you type into the terminal.
+It reads your commands, runs programs, and prints their output. Popular
+examples are Bash and ZSH.
+
+In this challenge, you'll build your own shell from scratch.
+
+Your shell will run a REPL, parse commands, spawn processes, and more.
+
+** Difficulty
+:PROPERTIES:
+:CUSTOM_ID: difficulty
+:END:
+=medium=
+
+** Testimonials
+:PROPERTIES:
+:CUSTOM_ID: testimonials
+:END:
+
+#+begin_quote
+/There are few sites I like as much that have a step by step guide. The
+real-time feedback is so good, it's creepy!/
+#+end_quote
+
+By [[https://github.com/anu294][Ananthalakshmi Sankar]]
+=Automation Engineer at Apple=
+
+--------------
+
+#+begin_quote
+/I think the instant feedback right there in the git push is really
+cool. Didn't even know that was possible!/
+#+end_quote
+
+By [[https://github.com/Jumballaya][Patrick Burris]]
+=Senior Software Developer, CenturyLink=
+
+--------------

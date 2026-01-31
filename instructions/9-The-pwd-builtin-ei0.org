@@ -1,0 +1,50 @@
+In this stage, you'll implement the =pwd= builtin.
+
+*** The =pwd= Builtin
+:PROPERTIES:
+:CUSTOM_ID: the-pwd-builtin
+:END:
+The [[https://en.wikipedia.org/wiki/Pwd][=pwd=]] (print working
+directory) builtin prints the full, absolute path of the current working
+directory to stdout.
+
+When your shell starts, its current working directory is typically the
+directory from which it was executed. Your =pwd= implementation needs to
+retrieve this information from the operating system and print it.
+
+For example:
+
+#+begin_src sh
+$ pwd
+/home/user/projects
+$ pwd
+/usr/local/bin
+#+end_src
+
+*** Tests
+:PROPERTIES:
+:CUSTOM_ID: tests
+:END:
+The tester will execute your program like this:
+
+#+begin_src sh
+./your_program.sh
+#+end_src
+
+It will then send a =pwd= command to your shell:
+
+#+begin_src sh
+$ pwd
+/path/to/current/directory
+$
+#+end_src
+
+The tester will verify that the =pwd= command correctly displays the
+current working directory.
+
+*** Notes
+:PROPERTIES:
+:CUSTOM_ID: notes
+:END:
+- The =pwd= command must print the full absolute path of the current
+  working directory.

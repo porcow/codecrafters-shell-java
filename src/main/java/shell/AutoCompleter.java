@@ -17,10 +17,16 @@ import org.jline.terminal.TerminalBuilder;
 
 public class AutoCompleter {
     private final String prompt;
+    private final ShellContext context;
     private String lastTabBuffer = null;
 
     public AutoCompleter(String prompt) {
+        this(prompt, null);
+    }
+
+    public AutoCompleter(String prompt, ShellContext context) {
         this.prompt = prompt;
+        this.context = context;
     }
 
     public LineReader buildLineReader() {
@@ -54,7 +60,7 @@ public class AutoCompleter {
             return "";
         } catch (EndOfFileException e) {
             System.out.println();
-            HistoryCommand.writeOnExit();
+            HistoryCommand.writeOnExit(context);
             System.exit(0);
         }
         return "";
@@ -91,13 +97,13 @@ public class AutoCompleter {
         }
 
         java.util.Set<String> unique = new java.util.TreeSet<>();
-        for (String builtin : Command.getBuiltinMap().keySet()) {
+        for (String builtin : CommandResolver.getBuiltinMap().keySet()) {
             if (builtin.startsWith(token)) {
                 unique.add(builtin);
             }
         }
 
-        String pathEnv = System.getenv("PATH");
+        String pathEnv = context != null ? context.getEnv("PATH") : System.getenv("PATH");
         if (pathEnv != null && !pathEnv.isBlank()) {
             String[] dirs = pathEnv.split(File.pathSeparator);
             for (String dir : dirs) {

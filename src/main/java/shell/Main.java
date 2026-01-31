@@ -7,12 +7,12 @@ public class Main {
 
     private static final Scanner SCANNER = new Scanner(System.in);
     private static final String PROMPT = "$ ";
-    private static final AutoCompleter AUTO_COMPLETER = new AutoCompleter(PROMPT);
-    private static final LineReader LINE_READER = AUTO_COMPLETER.buildLineReader();
     private static final ShellContext CONTEXT = new ShellContext();
+    private static final AutoCompleter AUTO_COMPLETER = new AutoCompleter(PROMPT, CONTEXT);
+    private static final LineReader LINE_READER = AUTO_COMPLETER.buildLineReader();
     private static final Shell SHELL = new Shell(CONTEXT);
     public static void main(String[] args) throws Exception {
-        HistoryCommand.initializeFromEnv();
+        HistoryCommand.initializeFromEnv(CONTEXT);
 
         while (true) {
             String input = read();

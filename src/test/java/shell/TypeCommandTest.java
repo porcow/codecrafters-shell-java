@@ -25,7 +25,7 @@ public class TypeCommandTest {
 
     @Test
     void run_reportsExternalCommandPath() {
-        String shPath = Command.findExecutable("sh");
+        String shPath = CommandResolver.findExecutable("sh");
         Assumptions.assumeTrue(shPath != null && !shPath.isBlank());
         Command command = Command.build("type", "");
         command.setArgList(List.of("sh"));

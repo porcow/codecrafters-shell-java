@@ -8,14 +8,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
 public class HistoryCommand implements CommandRunner {
-    private static final List<String> HISTORY = new ArrayList<>();
-    private static String historyFilePath;
-    private static int lastAppendIndex = 0;
     private static HistoryCommand instance;
 
     private HistoryCommand() {
@@ -28,71 +24,85 @@ public class HistoryCommand implements CommandRunner {
         return instance;
     }
 
-    public static void record(String line) {
-        if (line == null || line.isBlank()) {
+    public static void record(ShellContext context, String line) {
+        if (context == null || line == null || line.isBlank()) {
             return;
         }
-        HISTORY.add(line);
+        context.getHistory().add(line);
     }
 
-    public static void initializeFromEnv() {
-        String histFile = System.getenv("HISTFILE");
+    public static void initializeFromEnv(ShellContext context) {
+        if (context == null) {
+            return;
+        }
+        String histFile = context.getEnv("HISTFILE");
         if (histFile == null || histFile.isBlank()) {
             return;
         }
-        historyFilePath = histFile;
-        //record("history -r " + histFile);
-        readFromFile(histFile);
-        lastAppendIndex = HISTORY.size();
+        context.setHistoryFilePath(histFile);
+        readFromFile(context, histFile);
+        context.setLastAppendIndex(context.getHistory().size());
     }
 
-    static void clearHistory() {
-        HISTORY.clear();
-        historyFilePath = null;
-        lastAppendIndex = 0;
-    }
-
-    static void writeOnExit() {
-        if (historyFilePath == null || historyFilePath.isBlank()) {
+    static void clearHistory(ShellContext context) {
+        if (context == null) {
             return;
         }
-        appendToFile(historyFilePath);
+        context.getHistory().clear();
+        context.setHistoryFilePath(null);
+        context.setLastAppendIndex(0);
+    }
+
+    static void writeOnExit(ShellContext context) {
+        if (context == null) {
+            return;
+        }
+        String path = context.getHistoryFilePath();
+        if (path == null || path.isBlank()) {
+            return;
+        }
+        appendToFile(context, path);
     }
 
     @Override
     public void runWithStreams(Command cmd, InputStream in, OutputStream out, OutputStream err) {
         PrintStream stdout = CommandRunner.toPrintStream(out);
+        ShellContext context = cmd.getContext();
+        if (context == null) {
+            return;
+        }
+        List<String> history = context.getHistory();
         List<String> args = cmd.getArgList();
         if (args != null && !args.isEmpty()) {
             String option = args.get(0);
             if ("-w".equals(option)) {
                 if (args.size() >= 2) {
                     String path = args.get(1);
-                    historyFilePath = path;
-                    writeToFile(path);
-                    lastAppendIndex = HISTORY.size();
+                    context.setHistoryFilePath(path);
+                    writeToFile(context, path);
+                    context.setLastAppendIndex(history.size());
                 }
                 return;
             }
             if ("-r".equals(option)) {
                 if (args.size() >= 2) {
                     String path = args.get(1);
-                    historyFilePath = path;
-                    readFromFile(path);
+                    context.setHistoryFilePath(path);
+                    readFromFile(context, path);
                 }
                 return;
             }
             if ("-a".equals(option)) {
                 if (args.size() >= 2) {
                     String path = args.get(1);
-                    historyFilePath = path;
-                    appendToFile(path);
+                    context.setHistoryFilePath(path);
+                    appendToFile(context, path);
                 }
                 return;
             }
         }
 
-        int limit = HISTORY.size();
+        int limit = history.size();
         if (args != null && !args.isEmpty()) {
             try {
                 int value = Integer.parseInt(args.get(0));
@@ -106,15 +116,15 @@ public class HistoryCommand implements CommandRunner {
             }
         }
 
-        int start = Math.max(0, HISTORY.size() - limit);
-        for (int i = start; i < HISTORY.size(); i++) {
-            String entry = HISTORY.get(i);
+        int start = Math.max(0, history.size() - limit);
+        for (int i = start; i < history.size(); i++) {
+            String entry = history.get(i);
             stdout.printf("%5d  %s%n", i + 1, entry);
         }
     }
 
-    private static void readFromFile(String path) {
-        if (path == null || path.isBlank()) {
+    private static void readFromFile(ShellContext context, String path) {
+        if (context == null || path == null || path.isBlank()) {
             return;
         }
         try {
@@ -124,19 +134,20 @@ public class HistoryCommand implements CommandRunner {
             }
             try (Stream<String> lines = Files.lines(file, StandardCharsets.UTF_8)) {
                 lines.filter(line -> line != null && !line.isBlank())
-                        .forEach(HISTORY::add);
+                        .forEach(context.getHistory()::add);
             }
         } catch (Exception e) {
             // Ignore history file read failures.
         }
     }
 
-    private static void appendToFile(String path) {
-        if (path == null || path.isBlank()) {
+    private static void appendToFile(ShellContext context, String path) {
+        if (context == null || path == null || path.isBlank()) {
             return;
         }
-        int start = Math.min(Math.max(lastAppendIndex, 0), HISTORY.size());
-        if (start >= HISTORY.size()) {
+        List<String> history = context.getHistory();
+        int start = Math.min(Math.max(context.getLastAppendIndex(), 0), history.size());
+        if (start >= history.size()) {
             return;
         }
         try {
@@ -145,19 +156,19 @@ public class HistoryCommand implements CommandRunner {
                     StandardCharsets.UTF_8,
                     StandardOpenOption.CREATE,
                     StandardOpenOption.APPEND)) {
-                for (int i = start; i < HISTORY.size(); i++) {
-                    writer.write(HISTORY.get(i));
+                for (int i = start; i < history.size(); i++) {
+                    writer.write(history.get(i));
                     writer.newLine();
                 }
             }
-            lastAppendIndex = HISTORY.size();
+            context.setLastAppendIndex(history.size());
         } catch (Exception e) {
             // Ignore history file append failures.
         }
     }
 
-    private static void writeToFile(String path) {
-        if (path == null || path.isBlank()) {
+    private static void writeToFile(ShellContext context, String path) {
+        if (context == null || path == null || path.isBlank()) {
             return;
         }
         try {
@@ -166,7 +177,7 @@ public class HistoryCommand implements CommandRunner {
                     StandardCharsets.UTF_8,
                     StandardOpenOption.CREATE,
                     StandardOpenOption.TRUNCATE_EXISTING)) {
-                for (String entry : HISTORY) {
+                for (String entry : context.getHistory()) {
                     writer.write(entry);
                     writer.newLine();
                 }

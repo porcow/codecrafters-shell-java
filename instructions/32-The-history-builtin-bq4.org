@@ -1,0 +1,39 @@
+In this stage, you'll add support for
+[[https://www.gnu.org/software/bash/manual/html_node/Bash-History-Builtins.html#index-history][history]]
+as a shell builtin.
+
+*** The history builtin
+:PROPERTIES:
+:CUSTOM_ID: the-history-builtin
+:END:
+[[https://www.gnu.org/software/bash/manual/html_node/Bash-History-Builtins.html#index-history][history]]
+as a shell builtin that lists previously executed commands. Example
+usage:
+
+#+begin_src sh
+$ history
+    1  previous_command_1
+    2  previous_command_2
+    3  history
+#+end_src
+
+*** Tests
+:PROPERTIES:
+:CUSTOM_ID: tests
+:END:
+The tester will execute your program like this:
+
+#+begin_src sh
+./your_program.sh
+#+end_src
+
+The tester will then execute the =type history= command.
+
+#+begin_src sh
+$ type history
+history is a shell builtin
+$
+#+end_src
+
+The tester will then execute the =type history= command and expect the
+output to be =history is a shell builtin=.

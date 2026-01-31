@@ -14,7 +14,7 @@ public class HistoryCommandTest {
 
     @Test
     void history_printsAllCommands() {
-        HistoryCommand.clearHistory();
+        HistoryCommand.clearHistory(shell.getContext());
 
         TestUtils.captureStdout(() -> shell.evalInput("echo hello"));
         TestUtils.captureStdout(() -> shell.evalInput("echo world"));
@@ -33,7 +33,7 @@ public class HistoryCommandTest {
 
     @Test
     void history_limitsToLastNCommands() {
-        HistoryCommand.clearHistory();
+        HistoryCommand.clearHistory(shell.getContext());
 
         TestUtils.captureStdout(() -> shell.evalInput("echo one"));
         TestUtils.captureStdout(() -> shell.evalInput("echo two"));
@@ -49,7 +49,7 @@ public class HistoryCommandTest {
 
     @Test
     void history_readsFromFile(@TempDir Path tempDir) throws Exception {
-        HistoryCommand.clearHistory();
+        HistoryCommand.clearHistory(shell.getContext());
         Path historyFile = tempDir.resolve("history.log");
         String fileContent = String.join(System.lineSeparator(),
                 "echo hello",
@@ -73,7 +73,7 @@ public class HistoryCommandTest {
 
     @Test
     void history_writesToFile(@TempDir Path tempDir) throws Exception {
-        HistoryCommand.clearHistory();
+        HistoryCommand.clearHistory(shell.getContext());
         Path historyFile = tempDir.resolve("history.log");
 
         TestUtils.captureStdout(() -> shell.evalInput("echo hello"));
@@ -91,7 +91,7 @@ public class HistoryCommandTest {
 
     @Test
     void history_appendsOnlyNewCommands(@TempDir Path tempDir) throws Exception {
-        HistoryCommand.clearHistory();
+        HistoryCommand.clearHistory(shell.getContext());
         Path historyFile = tempDir.resolve("history.log");
 
         TestUtils.captureStdout(() -> shell.evalInput("echo initial_command_1"));

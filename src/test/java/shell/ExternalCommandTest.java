@@ -30,7 +30,7 @@ public class ExternalCommandTest {
 
     @Test
     void run_printsStderrWhenOnlyStderrOutput() {
-        Assumptions.assumeTrue(Command.findExecutable("sh") != null);
+        Assumptions.assumeTrue(CommandResolver.findExecutable("sh") != null);
         Command command = Command.build(context, "sh", "");
         command.setArgList(List.of("-c", "echo boom 1>&2"));
 
@@ -45,7 +45,7 @@ public class ExternalCommandTest {
 
     @Test
     void run_allowsNonZeroExitCodes() {
-        Assumptions.assumeTrue(Command.findExecutable("sh") != null);
+        Assumptions.assumeTrue(CommandResolver.findExecutable("sh") != null);
         Command command = Command.build(context, "sh", "");
         command.setArgList(List.of("-c", "exit 7"));
 
@@ -60,7 +60,7 @@ public class ExternalCommandTest {
 
     @Test
     void run_throwsWhenWorkingDirectoryIsInvalid() {
-        Assumptions.assumeTrue(Command.findExecutable("sh") != null);
+        Assumptions.assumeTrue(CommandResolver.findExecutable("sh") != null);
         Command command = Command.build(context, "sh", "");
         command.setArgList(List.of("-c", "echo ok"));
         command.setWorkspace(tempDir.resolve("missing").toString());

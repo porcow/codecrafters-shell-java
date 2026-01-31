@@ -1,0 +1,34 @@
+In this stage, you'll implement the =exit= builtin.
+
+*** The =exit= Builtin
+:PROPERTIES:
+:CUSTOM_ID: the-exit-builtin
+:END:
+The
+[[https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#exit][=exit=]]
+builtin is a special command that terminates the shell.
+
+When your shell receives the =exit= command, it should terminate
+immediately.
+
+*** Tests
+:PROPERTIES:
+:CUSTOM_ID: tests
+:END:
+The tester will execute your program like this:
+
+#+begin_src sh
+./your_program.sh
+#+end_src
+
+It will then send an invalid command to your shell, followed by the
+=exit= command:
+
+#+begin_src sh
+$ invalid_command_1
+invalid_command_1: command not found
+$ exit
+#+end_src
+
+The tester will verify that your shell terminates after receiving the
+=exit= command.

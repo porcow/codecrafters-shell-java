@@ -1,0 +1,66 @@
+In this stage, you'll implement the =type= builtin for your shell.
+
+*** The =type= Builtin
+:PROPERTIES:
+:CUSTOM_ID: the-type-builtin
+:END:
+The
+[[https://pubs.opengroup.org/onlinepubs/9799919799/utilities/type.html][=type=]]
+builtin is used to determine how a command would be interpreted if it
+were used. It checks whether a command is a builtin, an executable file,
+or unrecognized.
+
+For example:
+
+#+begin_src sh
+$ type echo
+echo is a shell builtin
+$ type exit
+exit is a shell builtin
+$ type invalid_command
+invalid_command: not found
+#+end_src
+
+For this stage, you'll handle two cases: - For builtin commands (like
+=echo=, =exit=, and =type=), print =<command> is a shell builtin=. - For
+unrecognized commands that don't match any builtin, print
+=<command>: not found=.
+
+We'll handle executable files in later stages.
+
+*** Tests
+:PROPERTIES:
+:CUSTOM_ID: tests
+:END:
+The tester will execute your program like this:
+
+#+begin_src sh
+./your_program.sh
+#+end_src
+
+It will then send a series of =type= commands to your shell:
+
+#+begin_src sh
+$ type echo
+echo is a shell builtin
+$ type exit
+exit is a shell builtin
+$ type type
+type is a shell builtin
+$ type invalid_command
+invalid_command: not found
+$
+#+end_src
+
+The tester will verify that: - Builtin commands print:
+=<command> is a shell builtin= - Unrecognized commands print:
+=<command>: not found=
+
+*** Notes
+:PROPERTIES:
+:CUSTOM_ID: notes
+:END:
+- The tester will only check for builtin commands and unrecognized
+  commands in this stage.
+- =type= itself is a shell builtin command, so =$ type type= should
+  print =type is a shell builtin=.

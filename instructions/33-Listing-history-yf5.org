@@ -1,0 +1,39 @@
+In this stage, you'll implement the =history= builtin.
+
+*** Tests
+:PROPERTIES:
+:CUSTOM_ID: tests
+:END:
+The tester will execute your program like this:
+
+#+begin_src sh
+./your_program.sh
+#+end_src
+
+It will then send multiple commands to your shell, followed by the
+=history= command:
+
+#+begin_src sh
+$ echo hello
+hello
+$ echo world
+world
+$ invalid_command
+invalid_command: command not found
+$ history
+    1  echo hello
+    2  echo world
+    3  invalid_command
+    4  history
+$
+#+end_src
+
+The tester expects a history list with the commands that were executed,
+formatted and indexed like in the example above.
+
+*** Notes
+:PROPERTIES:
+:CUSTOM_ID: notes
+:END:
+- Some shells like /zsh/ don't add the =history= command to the history
+  list, but the tester expects it to be present.

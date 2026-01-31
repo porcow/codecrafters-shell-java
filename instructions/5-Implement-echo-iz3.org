@@ -1,0 +1,52 @@
+In this stage, you'll implement the =echo= builtin.
+
+*** The =echo= Builtin
+:PROPERTIES:
+:CUSTOM_ID: the-echo-builtin
+:END:
+The
+[[https://pubs.opengroup.org/onlinepubs/9699919799/utilities/echo.html][=echo=]]
+builtin prints its arguments to stdout, with spaces between them, and a
+newline (=\n=) at the end.
+
+Example usage:
+
+#+begin_src sh
+$ echo hello world
+hello world
+$ echo one two three
+one two three
+#+end_src
+
+*** Tests
+:PROPERTIES:
+:CUSTOM_ID: tests
+:END:
+The tester will execute your program like this:
+
+#+begin_src sh
+./your_program.sh
+#+end_src
+
+It will then send a series of =echo= commands to your shell:
+
+#+begin_src sh
+$ echo hello world
+hello world
+$ echo pineapple strawberry
+pineapple strawberry
+$
+#+end_src
+
+After each command, the tester will verify that the =echo= command
+correctly prints the provided text back.
+
+*** Notes
+:PROPERTIES:
+:CUSTOM_ID: notes
+:END:
+- Most languages' standard output functions like =console.log()=
+  (JavaScript), =print()= (Python), or =println()= (Java) automatically
+  add a newline, which is what you want here. If your language requires
+  explicit newlines (like C's =printf()=), make sure to add =\n= at the
+  end.

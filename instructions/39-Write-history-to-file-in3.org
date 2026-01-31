@@ -1,0 +1,43 @@
+In this stage, you will add support for writing commands from memory to
+the history file using the =history -w <path_to_history_file>= command.
+
+*** Tests
+:PROPERTIES:
+:CUSTOM_ID: tests
+:END:
+The tester will execute your program like this:
+
+#+begin_src sh
+./your_program.sh
+#+end_src
+
+It will then send the following commands to your shell:
+
+#+begin_src sh
+$ echo hello
+hello
+$ echo world
+world
+$ history -w <path_to_history_file>
+$
+#+end_src
+
+The tester will then expect the history file's contents to look like:
+
+#+begin_src txt
+echo hello
+echo world
+history -w <path_to_history_file>
+<|EMPTY LINE|>
+#+end_src
+
+*** Notes
+:PROPERTIES:
+:CUSTOM_ID: notes
+:END:
+- If the file doesn't exist when running =history -w=, your shell should
+  create the file and then write the commands to it.
+- The tester will expect the =history -w= command to also be present in
+  the history file.
+- The history file should include a trailing newline character
+  (displayed as an empty line).

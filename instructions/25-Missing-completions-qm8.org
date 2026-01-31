@@ -1,0 +1,39 @@
+In this stage, you'll refine your shell's tab completion behavior to
+handle cases where the user types an invalid command.
+
+*** Handling Invalid Completions
+:PROPERTIES:
+:CUSTOM_ID: handling-invalid-completions
+:END:
+When the user types a command that doesn't match any known builtin and
+presses =<TAB>=, your shell should:
+
+1. Leave the input unchanged (don't modify what the user typed)
+2. Ring a bell to indicate there are no valid completions
+
+The bell is produced by printing the
+[[https://en.wikipedia.org/wiki/Bell_character][bell character]] =\x07=
+to the terminal. This typically produces an audible beep or visual
+flash, depending on the terminal settings.
+
+*** Tests
+:PROPERTIES:
+:CUSTOM_ID: tests
+:END:
+The tester will execute your program like this:
+
+#+begin_src sh
+./your_program.sh
+#+end_src
+
+The tests will simulate the user typing an invalid command and pressing
+the =<TAB>= key:
+
+#+begin_src sh
+$ xyz<TAB>
+$ xyz
+#+end_src
+
+The tester will verify that: - The input remains unchanged when no
+completion is possible - The bell character is printed to indicate no
+matches

@@ -28,7 +28,7 @@ public class Shell {
 
     public void evalInput(String inputString) {
         if (inputString != null && !inputString.isBlank()) {
-            HistoryCommand.record(inputString.trim());
+            HistoryCommand.record(context, inputString.trim());
         }
         List<List<String>> pipelineParts = CCParser.splitPipelineTokens(inputString);
         if (pipelineParts.size() > 1) {
@@ -277,7 +277,7 @@ public class Shell {
             return null;
         }
         if (command.isBuiltin()) {
-            return Command.getBuiltinMap().get(command.getName());
+            return CommandResolver.getBuiltinMap().get(command.getName());
         }
         if (command.isRunable()) {
             return ExternalCommand.getInstance();
